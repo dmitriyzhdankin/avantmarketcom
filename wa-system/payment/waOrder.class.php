@@ -5,14 +5,13 @@
  *
  * @property int $contact_id
  *
- * @property string $currency
+ * @property string $currency ISO3 code
  * @property double $total
  * @property double $tax
  * @property double $discount
  *
  * @property double $subtotal
-
- * @property double $shipping
+ * @property double $shipping shipping price
  * @property string $shipping_name
  * @property string $payment_name
  *
@@ -23,6 +22,7 @@
  * @property string $update_datetime
  * @property string $paid_datetime
  *
+ * @property array $shipping_address
  * @property array[string]string $shipping_address['name']
  * @property array[string]string $shipping_address['firstname']
  * @property array[string]string $shipping_address['lastname']
@@ -35,6 +35,7 @@
  * @property array[string]string $shipping_address['country_name']
  * @property array[string]string $shipping_address['address']
  *
+ * @property array $billing_address
  * @property array[string]string $billing_address['name']
  * @property array[string]string $billing_address['firstname']
  * @property array[string]string $billing_address['lastname']
@@ -47,7 +48,6 @@
  * @property array[string]string $billing_address['country']
  * @property array[string]string $billing_address['country_name']
  * @property array[string]string $billing_address['address']
- *
  *
  * @property array $items
  * @property array[][string]string  $items[]['id']
@@ -77,6 +77,10 @@ class waOrder implements ArrayAccess
     private $contact;
     private $alias;
 
+    /**
+     * @param array|waOrder $data
+     * @return waOrder
+     */
     public static function factory($data = array())
     {
         if ($data instanceof self) {
@@ -97,10 +101,15 @@ class waOrder implements ArrayAccess
             'currency_id'         => 'currency',
             'create_datetime'     => 'datetime',
         );
-        $this->fields = array_keys($data);
+        $this->fields = array();
         if (!empty($data)) {
             foreach ($data as $field => $value) {
                 $this->data[$field] = $value;
+                $this->fields[] = $field;
+                if (isset($this->alias[$field]) && !isset($data[$this->alias[$field]])) {
+                    $this->data[$this->alias[$field]] = & $this->data[$field];
+                    $this->fields[] = $this->alias[$field];
+                }
             }
         }
         $this->subtotal = 0.0 + $this->total - $this->tax + $this->discount - $this->shipping;
@@ -118,7 +127,9 @@ class waOrder implements ArrayAccess
     }
 
     /**
-     * @param offset
+     * @param mixed $offset
+     * @return bool
+     * @internal param $offset
      */
     public function offsetExists($offset)
     {
@@ -130,7 +141,8 @@ class waOrder implements ArrayAccess
     }
 
     /**
-     * @param offset
+     * @param $offset
+     * @return mixed|null
      */
     public function offsetGet($offset)
     {
@@ -154,8 +166,9 @@ class waOrder implements ArrayAccess
     }
 
     /**
-     * @param offset
-     * @param value
+     * @param $offset
+     * @param $value
+     * @return mixed|void
      */
     public function offsetSet($offset, $value)
     {
@@ -169,7 +182,7 @@ class waOrder implements ArrayAccess
     }
 
     /**
-     * @param offset
+     * @param mixed $offset
      */
     public function offsetUnset($offset)
     {
@@ -196,7 +209,8 @@ class waOrder implements ArrayAccess
             'city',
             'region',
             'country',
-            'address', ), '');
+            'address',
+        ), '');
         if (is_array($address)) {
             $address = array_merge($dummy_address, $address);
         } else {
@@ -218,7 +232,7 @@ class waOrder implements ArrayAccess
             }
         }
         if (empty($address['address'])) {
-            $fields = array('street', 'city', 'region_name', 'zip', 'country_name', );
+            $fields = array('street', 'city', 'region_name', 'zip', 'country_name',);
             $address['address'] = '';
             $chunks = array();
             foreach ($fields as $field) {
@@ -237,7 +251,7 @@ class waOrder implements ArrayAccess
             }
 
             $address['name'] = '';
-            $fields = array('firstname', 'lasname', 'middlename', );
+            $fields = array('firstname', 'lasname', 'middlename',);
             foreach ($fields as $field) {
                 if (!empty($address[$field])) {
                     $address['name'] .= ' '.$address[$field];

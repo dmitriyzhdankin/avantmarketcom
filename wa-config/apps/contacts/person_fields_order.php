@@ -47,6 +47,9 @@ return array (
   ),
   'about' => 
   array (
+    'allow_self_edit' => true,
+    'required' => NULL,
+    'unique' => NULL,
   ),
   'categories' => 
   array (
@@ -57,4 +60,3 @@ return array (
     'unique' => NULL,
   ),
 );
-// EOF

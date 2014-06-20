@@ -3,7 +3,7 @@
  *
  * @author WebAsyst Team
  * @name WebMoney
- * @description WebMoney pament module
+ * @description WebMoney payment module
  * @property-read string $LMI_MERCHANT_ID
  * @property-read string $LMI_PAYEE_PURSE
  * @property-read string $secret_key
@@ -20,24 +20,49 @@ class webmoneyPayment extends waPayment implements waIPayment
 
     public function allowedCurrency()
     {
-        return array('RUB','USD');
+        $currency = false;
+
+        switch ($this->protocol) {
+            case self::PROTOCOL_WEBMONEY_LEGACY:
+            case self::PROTOCOL_PAYMASTER:
+                $currency = array('RUB', 'UAH', 'USD', 'EUR', 'UZS', 'BYR');
+                break;
+            case self::PROTOCOL_WEBMONEY:
+            default:
+                $currency_map = array(
+                    'R' => 'RUB',
+                    'U' => 'UAH',
+                    'Z' => 'USD',
+                    'E' => 'EUR',
+                    'D' => 'USD',
+                    'Y' => 'UZS',
+                    'B' => 'BYR',
+                );
+                $pattern = '/^(['.implode('', array_keys($currency_map)).'])\d+$/i';
+                if (preg_match($pattern, trim($this->LMI_PAYEE_PURSE), $matches)) {
+                    $key = strtoupper($matches[1]);
+                    if (isset($currency_map[$key])) {
+                        $currency = $currency_map[$key];
+                    }
+                }
+                break;
+        }
+        return $currency;
     }
 
-    public function payment($payment_form_data, $order_data, $transaction_type)
+    public function payment($payment_form_data, $order_data, $auto_submit = false)
     {
-        if (!in_array($order_data['currency_id'],$this->allowedCurrency())) {
-            throw new waException('Оплата на сайте WebMoney производится только в рублях (RUB) и в данный момент невозможна, так как эта валюта не определена в настройках.');
-        }
         if (empty($order_data['description'])) {
             $order_data['description'] = 'Заказ '.$order_data['order_id'];
         }
+        $order = waOrder::factory($order_data);
 
         $hidden_fields = array(
             'LMI_MERCHANT_ID'        => $this->LMI_MERCHANT_ID,
-            'LMI_PAYMENT_AMOUNT'     => number_format($order_data['amount'], 2, '.', ''),
-            'LMI_CURRENCY'           => strtoupper($order_data['currency_id']),
+            'LMI_PAYMENT_AMOUNT'     => number_format($order->total, 2, '.', ''),
+            'LMI_CURRENCY'           => strtoupper($order->currency),
             'LMI_PAYMENT_NO'         => $order_data['order_id'],
-            'LMI_PAYMENT_DESC'       => $order_data['description'],
+            'LMI_PAYMENT_DESC'       => $order->description,
             'LMI_RESULT_URL'         => $this->getRelayUrl(),
             'wa_app'                 => $this->app_id,
             'wa_merchant_contact_id' => $this->merchant_id,
@@ -56,12 +81,27 @@ class webmoneyPayment extends waPayment implements waIPayment
         $hidden_fields['LMI_SUCCESS_URL'] = $this->getAdapter()->getBackUrl(waAppPayment::URL_SUCCESS, $transaction_data);
         $hidden_fields['LMI_FAILURE_URL'] = $this->getAdapter()->getBackUrl(waAppPayment::URL_FAIL, $transaction_data);
 
+        switch ($this->protocol) {
+            case self::PROTOCOL_PAYMASTER:
+            case self::PROTOCOL_WEBMONEY_LEGACY:
+                break;
+            case self::PROTOCOL_WEBMONEY:
+            default:
+                unset($hidden_fields['LMI_CURRENCY']);
+                if (strpos(waRequest::getUserAgent(), 'MSIE') !== false) {
+                    $hidden_fields['LMI_PAYMENT_DESC'] = $order->description_en;
+                }
+                break;
+        }
+
         $view = wa()->getView();
 
         $view->assign('url', wa()->getRootUrl());
         $view->assign('hidden_fields', $hidden_fields);
 
         $view->assign('form_url', $this->getEndpointUrl());
+        $view->assign('form_options', $this->getFormOptions());
+        $view->assign('auto_submit', $auto_submit);
 
         return $view->fetch($this->path.'/templates/payment.html');
     }
@@ -80,7 +120,8 @@ class webmoneyPayment extends waPayment implements waIPayment
 
     /**
      *
-     * @param $data - get from gateway
+     * @param array $data - get from gateway
+     * @throws waException
      * @return void
      */
     protected function callbackHandler($data)
@@ -98,6 +139,7 @@ class webmoneyPayment extends waPayment implements waIPayment
         switch ($transaction_data['type']) {
             case self::OPERATION_CHECK:
                 $app_payment_method = self::CALLBACK_CONFIRMATION;
+                $transaction_data['state'] = self::STATE_AUTH;
                 break;
 
             case self::OPERATION_AUTH_CAPTURE:
@@ -105,16 +147,15 @@ class webmoneyPayment extends waPayment implements waIPayment
                 $this->verifySign($data);
                 //TODO log payer WM ID
                 $app_payment_method = self::CALLBACK_PAYMENT;
+                $transaction_data['state'] = self::STATE_CAPTURED;
                 break;
         }
-        $transaction_data['state'] = self::STATE_CAPTURED;
+
         $transaction_data = $this->saveTransaction($transaction_data, $data);
 
         $transaction_data['success_back_url'] = isset($data['wa_success_url']) ? $data['wa_success_url'] : null;
 
         $result = $this->execAppCallback($app_payment_method, $transaction_data);
-
-        self::addTransactionData($transaction_data['id'], $result);
 
         if (!empty($result['result'])) {
             self::log($this->id, array('result' => 'success'));
@@ -142,6 +183,19 @@ class webmoneyPayment extends waPayment implements waIPayment
                 break;
         }
         return $url;
+    }
+
+    private function getFormOptions()
+    {
+        $options = array();
+        switch ($this->protocol) {
+            case self::PROTOCOL_WEBMONEY:
+            default:
+                $options['accept-charset'] = 'windows-1251';
+                break;
+        }
+        return $options;
+
     }
 
     private function verifySign($data)
@@ -239,7 +293,7 @@ class webmoneyPayment extends waPayment implements waIPayment
 
     /**
      * Convert transaction raw data to formatted data
-     * @param array $data - transaction raw data
+     * @param array $transaction_raw_data - transaction raw data
      * @return array $transaction_data
      */
     protected function formalizeData($transaction_raw_data)
@@ -278,6 +332,12 @@ class webmoneyPayment extends waPayment implements waIPayment
         $transaction_data['order_id'] = $transaction_raw_data['LMI_PAYMENT_NO'];
         $transaction_data['amount'] = $transaction_raw_data['LMI_PAYMENT_AMOUNT'];
         $transaction_data['currency_id'] = $transaction_raw_data['LMI_CURRENCY'];
+        if (empty($transaction_data['currency_id'])) {
+            $currency = $this->allowedCurrency();
+            if ($currency && !is_array($currency)) {
+                $transaction_data['currency_id'] = $currency;
+            }
+        }
 
         return $transaction_data;
     }

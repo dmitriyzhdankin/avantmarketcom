@@ -1,0 +1,20 @@
+#block_nav_primary .grid_12.show {
+    height: 58px;
+}
+#block_nav_primary ul.custom-menu>li:hover>a {
+    background: none;
+}
+#block_nav_primary ul.custom-menu li a {
+    background-image: none;
+}
+ul.custom-menu > li > a {
+    border: 1px solid #F5F7F9;
+}
+.custom-menu>li:hover {
+    background: #d5e4f1;
+    text-decoration: none;
+}
+#block_nav_primary .dropdown_3columns {
+    border:1px solid #E0E0E0;
+    background: none repeat scroll 0% 0% #FAFAFA;
+}

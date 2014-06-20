@@ -116,7 +116,7 @@ class waSystemConfig
         return isset(self::$system_options[$name]) ? self::$system_options[$name] : null;
     }
 
-    protected function getOption($name)
+    protected function getOption($name = null)
     {
         return $this->getSystemOption($name);
     }
@@ -173,8 +173,7 @@ class waSystemConfig
 
     public function getHostUrl()
     {
-            $https = isset($_SERVER['HTTPS']) ? $_SERVER['HTTPS'] : '';
-            if (strtolower($https) == 'on') {
+            if (waRequest::isHttps()) {
                 $url = 'https://';
             } else {
                 $url = 'http://';
@@ -196,6 +195,8 @@ class waSystemConfig
     protected function configure()
     {
         @mb_internal_encoding('UTF-8');
+        @ini_set('default_charset', 'utf-8');
+
         @ini_set('register_globals', 'off');
         // magic quotes
         @ini_set("magic_quotes_runtime",0);
@@ -250,7 +251,7 @@ class waSystemConfig
         }
     }
 
-    public function setPath($root_path)
+    protected function setPath($root_path)
     {
         $this->root_path = $root_path;
         waConfig::add(array(
@@ -375,7 +376,7 @@ class waSystemConfig
     {
         $class_name = $application.'Config';
         if ($root_path === null) {
-            $root_path = realpath(dirname(__FILE__).'/../..');
+            $root_path = waConfig::get('wa_path_root');
         }
 
         if ($environment === null) {

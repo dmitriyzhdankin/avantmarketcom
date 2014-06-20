@@ -1,7 +1,3 @@
-{wa_js file="js/compiled/blogPlugins.js"}
-	{$wa_url}wa-content/js/jquery-plugins/jquery.history.js
-	{$wa_app_static_url}js/blogPlugins.js
-{/wa_js}
   <script type="text/javascript">
   $.wa_blog.plugins = $.extend(true,$.wa_blog.plugins,{
     'options':{
@@ -29,8 +25,14 @@
       {/foreach}
       </ul>
 
-      <div class="align-center hint hr">
-        [`Plugin order defines the order they are executed. Sort plugin list to change the order.`]
+      <div class="block double-padded hr align-center">
+            <p class="hint">
+                <a href="{$wa_backend_url|cat:'installer/#/plugins/blog/'}" class="bold">
+                    [`Browse for new plugins`]
+                </a>
+                <br>
+                <span class="gray">[`Use Installer to install new plugins from the Webasyst Store`]</span>
+            </p>    
       </div>
     </div>
 

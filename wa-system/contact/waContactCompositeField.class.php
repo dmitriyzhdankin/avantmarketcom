@@ -251,6 +251,13 @@ class waContactCompositeField extends waContactField
         return $fields;
     }
 
+    public function prepareVarExport()
+    {
+        foreach ($this->options['fields'] as $f) {
+            $f->prepareVarExport();
+        }
+    }
+
     public function setParameter($p, $value)
     {
         if ($p === 'required') {
@@ -283,6 +290,13 @@ class waContactCompositeField extends waContactField
             $params_subfield['id'] = $field->getId();
             $params_subfield['parent'] = $params['id'];
             $params_subfield['value'] = ifset($data[$field->getId()]);
+
+            if (!strlen($params_subfield['value'])) {
+                $default_value = $field->getParameter('value');
+                if ($default_value) {
+                    $params_subfield['value'] = $default_value;
+                }
+            }
 
             $errors_html = '';
             $attrs_one = $attrs;

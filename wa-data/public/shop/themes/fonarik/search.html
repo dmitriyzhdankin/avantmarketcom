@@ -173,7 +173,7 @@
   {/if}
     
         <!-- description -->
-    {if $category.description}
+    {if isset($category) && $category.description}
         <p>{$category.description}</p>
     {/if}
        </div><!-- #content -->

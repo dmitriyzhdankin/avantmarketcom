@@ -27,6 +27,8 @@
  * @property float $price
  * @property float $compare_price
  * @property float $base_price_selectable
+ * @property float $compare_price_selectable
+ * @property float $purchase_price_selectable
  * @property string $currency
  * @property float $min_price
  * @property float $max_price
@@ -35,14 +37,16 @@
  *
  * @property int $type_id
  * @property array $type
- * @property string $type['name']
  * @property int $category_id
  * @property array $features
  * @example
  * // read product feature
  * $product->features['feature_code'];
+ * @property array $features_selectable
  * @property array $skus
+ * @property-read int $sku_count
  * @property array $categories
+ * @property array $tags
  * @property array $params
  */
 class shopProduct implements ArrayAccess
@@ -72,11 +76,12 @@ class shopProduct implements ArrayAccess
     {
         if (!self::$data_storages) {
             self::$data_storages = array(
-                'tags'       => true,
-                'features'   => true,
-                'skus'       => true,
-                'params'     => true,
-                'categories' => 'shopCategoryProductsModel'
+                'tags'                => true,
+                'features_selectable' => 'shopProductFeaturesSelectableModel', //should be before skus
+                'skus'                => true, //should be before features
+                'features'            => true,
+                'params'              => true,
+                'categories'          => 'shopCategoryProductsModel'
             );
         }
         if (isset(self::$data_storages[$key])) {
@@ -105,14 +110,14 @@ class shopProduct implements ArrayAccess
         return $this->getData('id');
     }
 
-    public function getImages($sizes = array())
+    public function getImages($sizes = array(), $absolute = false)
     {
         if ($this->getId()) {
             $images_model = new shopProductImagesModel();
             if (empty($sizes)) {
                 $sizes = 'crop';
             }
-            return $images_model->getImages($this->getId(), $sizes);
+            return $images_model->getImages($this->getId(), $sizes, 'id', $absolute);
         } else {
             return array();
         }
@@ -134,6 +139,7 @@ class shopProduct implements ArrayAccess
 
     public function save($data = array(), $validate = true, &$errors = array())
     {
+        $result = false;
         $id = $this->getId();
         $search = new shopIndexSearch();
 
@@ -141,6 +147,14 @@ class shopProduct implements ArrayAccess
             // name have to be not empty
             if ($name == 'name' && !$value) {
                 $value = _w('New product');
+            }
+            if ($name == 'name') {
+                $value = trim($value);
+            }
+            if ($name == 'skus') {
+                foreach($value as &$sku) {
+                    $sku['sku'] = trim($sku['sku']);
+                }
             }
 
             // url have to be not empty
@@ -173,7 +187,7 @@ class shopProduct implements ArrayAccess
                     $search->onUpdate($id);
                     $this->is_dirty = array();
 
-                    return true;
+                    $result = true;
                 }
             } else {
                 if (!isset($product['contact_id'])) {
@@ -206,19 +220,58 @@ class shopProduct implements ArrayAccess
                         ));
                     }
 
-                    return true;
+                    $result = true;
                 }
             }
-            return false;
+
+        } else {
+            $result = true;
         }
-        return true;
+
+        $params = array(
+            'data'     => $this->getData(),
+            'instance' => & $this,
+        );
+
+        /**
+         * Handle product entry save
+         * @event product_save
+         *
+         * @param array [string]mixed $params
+         * @param array [string][string]mixed $params['data'] raw product data fields (see shop_product table description and related storages)
+         * @param array [string][string]int $data['data']['id'] product ID
+         * @param array [string]shopProduct $params['instance'] current shopProduct entry instance (avoid recursion)
+         * @return void
+         */
+        wa()->event('product_save', $params);
+        return $result;
     }
 
     protected function saveData(&$errors = array())
     {
-        foreach ($this->is_dirty as $field => $v) {
-            if ($storage = $this->getStorage($field)) {
-                $this->data[$field] = $storage->setData($this, $this->data[$field]);
+        #fix empty SKUs
+        if (!$this->sku_count && empty($this->is_dirty) && empty($this->data['skus'])) {
+            $this->setData('skus', array(
+                -1 => array(
+                    'name' => '',
+                )
+            ));
+        }
+        if ($this->is_dirty) {
+            $this->getStorage(null);
+            //save external data in right storage order
+            foreach (array_keys(self::$data_storages) as $field) {
+                if (($field == 'skus') && !$this->sku_count && empty($this->is_dirty[$field]) && empty($this->data['skus'])) {
+                    #fix empty SKUs on missed virtual SKUs
+                    $this->setData('skus', array(
+                        -1 => array(
+                            'name' => '',
+                        )
+                    ));
+                }
+                if (!empty($this->is_dirty[$field]) && ($storage = $this->getStorage($field))) {
+                    $this->data[$field] = $storage->setData($this, $raw = $this->data[$field]);
+                }
             }
         }
     }
@@ -242,15 +295,6 @@ class shopProduct implements ArrayAccess
             return $this->data[$name];
         }
         return null;
-    }
-
-    private function preloadExtInfo($ext_info)
-    {
-        foreach ($ext_info as $name) {
-            if (!isset($this->data[$name])) {
-                $this->__get($name);
-            }
-        }
     }
 
     /**
@@ -297,6 +341,7 @@ class shopProduct implements ArrayAccess
     {
         return isset($this->data[$offset]) || $this->model->fieldExists($offset) || $this->getStorage($offset);
     }
+
     /**
      * Offset to retrieve
      * @link http://php.net/manual/en/arrayaccess.offsetget.php
@@ -358,10 +403,10 @@ class shopProduct implements ArrayAccess
     public function getType()
     {
         $model = new shopTypeModel();
-        return $model->getById($this->type_id);
+        return $this->type_id ? $model->getById($this->type_id) : null;
     }
 
-    public function upSelling($limit = 5)
+    public function upSelling($limit = 5, $available_only = false)
     {
         $upselling = $this->getData('upselling');
         // upselling on (usign similar settting for type)
@@ -370,21 +415,26 @@ class shopProduct implements ArrayAccess
             $conditions = $type_upselling_model->getByField('type_id', $this->getData('type_id'), true);
             if ($conditions) {
                 $collection = new shopProductsCollection('upselling/'.$this->getId(), array('product' => $this, 'conditions' => $conditions));
+                if ($available_only) {
+                    $collection->addWhere('(p.count > 0 OR p.count IS NULL)');
+                }
                 return $collection->getProducts('*', $limit);
             } else {
                 return array();
             }
         } elseif (!$upselling) {
             return array();
-        }
-        // upselling on (manually)
+        } // upselling on (manually)
         else {
             $collection = new shopProductsCollection('related/upselling/'.$this->getId());
+            if ($available_only) {
+                $collection->addWhere('(p.count > 0 OR p.count IS NULL)');
+            }
             return $collection->getProducts('*', $limit);
         }
     }
 
-    public function crossSelling($limit = 5)
+    public function crossSelling($limit = 5, $available_only = false)
     {
         $cross_selling = $this->getData('cross_selling');
         // upselling on (usign similar settting for type)
@@ -392,6 +442,12 @@ class shopProduct implements ArrayAccess
             $type = $this->getType();
             if ($type['cross_selling']) {
                 $collection = new shopProductsCollection($type['cross_selling'].($type['cross_selling'] == 'alsobought' ? '/'.$this->getId() : ''));
+                if ($available_only) {
+                    $collection->addWhere('(p.count > 0 OR p.count IS NULL)');
+                }
+                if ($type['cross_selling'] != 'alsobought') {
+                    $collection->orderBy('RAND()');
+                }
                 $result = $collection->getProducts('*', $limit);
                 if (isset($result[$this->getId()])) {
                     unset($result[$this->getId()]);
@@ -404,8 +460,49 @@ class shopProduct implements ArrayAccess
             return array();
         } else {
             $collection = new shopProductsCollection('related/cross_selling/'.$this->getId());
+            if ($available_only) {
+                $collection->addWhere('(p.count > 0 OR p.count IS NULL)');
+            }
             return $collection->getProducts('*', $limit);
         }
+    }
+
+    /**
+     *
+     * @param double $rate Number of sold products in one day
+     * @return array
+     */
+    public function getRunout($rate)
+    {
+        $runout = array();
+        $sku_runout = array();
+        if ($rate > 0) {
+            // for whole product
+            if ($this->count !== null) {
+                $runout['days'] = round($this->count / $rate);
+                $runout['date'] = date('Y-m-d', strtotime("+{$runout['days']} days"));
+            }
+            // for each sku
+            foreach ($this->skus as $sku_id => $sku) {
+                if (empty($sku['stock'])) {
+                    if ($sku['count'] !== null) {
+                        $days = round($sku['count'] / $rate);
+                        $sku_runout[$sku_id]['days'] = $days;
+                        $sku_runout[$sku_id]['date'] = date('Y-m-d', strtotime("+{$days} days"));
+                    }
+                } else {
+                    foreach ($sku['stock'] as $stock_id => $count) {
+                        $days = round($count / $rate);
+                        $sku_runout[$sku_id]['stock'][$stock_id]['days'] = $days;
+                        $sku_runout[$sku_id]['stock'][$stock_id]['date'] = date('Y-m-d', strtotime("+{$days} days"));
+                    }
+                }
+            }
+        }
+        return array(
+            'product' => $runout,
+            'sku'     => $sku_runout
+        );
     }
 
     /**

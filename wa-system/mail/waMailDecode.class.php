@@ -98,6 +98,7 @@ class waMailDecode
         }
         fclose($this->source);
 
+
         $headers = $this->parts[0]['headers'];
         foreach ($headers as $h => &$v) {
             if (is_array($v)) {
@@ -178,16 +179,24 @@ class waMailDecode
         return $message_id ? $message_id : null;
     }
 
-    protected function cleanHTML($html)
+    protected function cleanHTML($html_orig)
     {
         // body only
-        $html = preg_replace("!^.*?<body[^>]*>(.*?)</body>.*?$!is", "$1", $html);
+        $html = preg_replace("!^.*?<body[^>]*>(.*?)</body>.*?$!uis", "$1", $html_orig);
+
+        // Being paranoid... In case UTF is not quite UTF.
+        if (!$html) {
+            $html = preg_replace("!^.*?<body[^>]*>(.*?)</body>.*?$!is", "$1", $html_orig);
+        }
+
+        // Remove <style> blocks
+        $html = preg_replace("~<style[^>]*>.*?</style>~is", '', $html);
 
         // remove tags
         $html = trim(strip_tags($html, "<a><p><div><br><b><blockquote><strong><i><em><s><u><span><img><sup><font><sub><ul><ol><li><h1><h2><h3><h4><h5><h6><table><tr><td><th><hr><center>"));
         // realign javascript href to onclick
         $html = preg_replace("/href=(['\"]).*?javascript:(.*)?\\1/i", "onclick=' $2 '", $html);
- 
+
         //remove javascript from tags
         $pattern = "/<(.*)?javascript.*?\(.*?((?>[^()]+)|(?R)).*?\)?\)(.*)?>/i";
         while (preg_match($pattern, $html)) {
@@ -245,7 +254,13 @@ class waMailDecode
                 $i1 = strpos($this->buffer, "\r", $this->buffer_offset);
                 $i2 = strpos($this->buffer, "\n", $this->buffer_offset);
                 if ($i1 !== false || $i2 !== false) {
-                    $i = min($i1, $i2);
+                    if ($i1 === false) {
+                        $i = $i2;
+                    } elseif ($i2 === false) {
+                        $i = $i1;
+                    } else {
+                        $i = min($i1, $i2);
+                    }
                     $str = substr($this->buffer, $this->buffer_offset, $i - $this->buffer_offset);
                     if ($str === str_repeat("-", strlen($str))) {
                         $this->buffer_offset = $i;
@@ -329,7 +344,25 @@ class waMailDecode
                             }
                             return false;
                         }
-                        $this->skipLineBreak();
+                        if (!$this->skipLineBreak()) {
+                            $in = strpos($this->buffer, "\n", $this->buffer_offset);
+                            if ($in === false) {
+                                return false;
+                            }
+                            if ($this->buffer[$in - 1] == "\r") {
+                                $in--;
+                            }
+                            if (($in - $this->buffer_offset) < 5) {
+                                $this->buffer_offset = $in;
+                            }
+                            $this->skipLineBreak();
+                        }
+
+                        if ($this->is_last && $this->buffer_offset == strlen($this->buffer)) {
+                            $this->state = self::STATE_END;
+                            return true;
+                        }
+
                         $this->parts[] = array('parent' => $this->part_index);
                         $this->part_index = count($this->parts) - 1;
                         $this->part = &$this->parts[$this->part_index];
@@ -402,9 +435,17 @@ class waMailDecode
     {
         if ($this->buffer[$this->buffer_offset] == "\n") {
             $this->buffer_offset++;
+            return true;
         } elseif (substr($this->buffer, $this->buffer_offset, 2) == "\r\n") {
             $this->buffer_offset += 2;
+            return true;
         }
+        return false;
+    }
+
+    protected static function quotedPrintableReplace($matches)
+    {
+        return  chr(hexdec($matches[1]));
     }
 
     protected function decodePart($part)
@@ -530,7 +571,7 @@ class waMailDecode
                                     break;
                                 case 'quoted-printable':
                                     $this->part['data'] = preg_replace("/=\r?\n/", '', $this->part['data']);
-                                    $this->part['data'] = preg_replace('/=([a-f0-9]{2})/ie', "chr(hexdec('\\1'))", $this->part['data']);
+                                    $this->part['data'] = preg_replace_callback('/=([a-f0-9]{2})/i', array(__CLASS__, 'quotedPrintableReplace'), $this->part['data']);
                                     break;
                             }
                         }
@@ -596,7 +637,7 @@ class waMailDecode
         if (preg_match("/=\?(.+)\?(B|Q)\?(.*)\?=?(.*)/i", $value, $m)) {
             $value = ltrim($value);
             if (isset($m[3]) && strpos($m[3], '_') !== false && strpos($m[3], ' ') === false) {
-                $value = iconv_mime_decode($value, 0, 'UTF-8');
+                $value = iconv_mime_decode(str_replace("\n", "", $value), 0, 'UTF-8');
             } else {
                 $temp = mb_decode_mimeheader($value);
                 if ($temp === $value) {

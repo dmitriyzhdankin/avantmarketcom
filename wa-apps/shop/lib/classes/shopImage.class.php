@@ -43,7 +43,7 @@ class shopImage
     {
         $config = wa('shop')->getConfig();
         if ($quality === null) {
-            $quality = $config->getOption('image_save_quality');
+            $quality = $config->getSaveQuality();
             if (!$quality) {
                 $quality = 100;
             }
@@ -86,17 +86,17 @@ class shopImage
     }
 
     /**
-     *
      * @param array $image
      * @param array $sizes (optional)
      * generateThumbs
-     *
+     * @param bool $force
      * @throws waException
      */
     public static function generateThumbs($image, $sizes = array(), $force = true)
     {
         $sizes = (array) $sizes;
         $product_id = $image['product_id'];
+        $config = wa('shop')->getConfig();
         if (!empty($sizes) && !empty($image) && $product_id) {
             $thumbs_path = self::getThumbsPath($image);
             if (!file_exists($thumbs_path) && !waFiles::create($thumbs_path)) {
@@ -111,7 +111,7 @@ class shopImage
                      * @var waImage
                      */
                     if ($thumb_img = self::generateThumb($image_path, $size)) {
-                        $thumb_img->save($thumb_path);
+                        $thumb_img->save($thumb_path, $config->getSaveQuality());
                     }
                 }
             }
@@ -130,18 +130,33 @@ class shopImage
 
         switch ($type) {
             case 'max':
+                if (is_numeric($max_size) && $width > $max_size) {
+                    return null;
+                }
                 $image->resize($width, $height);
                 break;
             case 'crop':
+                if (is_numeric($max_size) && $width > $max_size) {
+                    return null;
+                }
                 $image->resize($width, $height, waImage::INVERSE)->crop($width, $height);
                 break;
             case 'width':
+                if (is_numeric($max_size) && ($width > $max_size || $height > $max_size)) {
+                    return null;
+                }
                 $image->resize($width, $height);
                 break;
             case 'height':
+                if (is_numeric($max_size) && ($width > $max_size || $height > $max_size)) {
+                    return null;
+                }
                 $image->resize($width, $height);
                 break;
             case 'rectangle':
+                if (is_numeric($max_size) && ($width > $max_size || $height > $max_size)) {
+                    return null;
+                }
                 if ($width > $height) {
                     $w = $image->width;
                     $h = $image->width * $height / $width;
@@ -149,7 +164,7 @@ class shopImage
                     $h = $image->height;
                     $w = $image->height * $width / $height;
                 }
-                $image->crop($w, $h)->resize($width, $height);
+                $image->crop($w, $h)->resize($width, $height, waImage::INVERSE);
                 break;
             default:
                 throw new waException("Unknown type");
@@ -233,7 +248,8 @@ class shopImage
             if (file_exists(wa()->getDataPath($path, true, 'shop'))) {
                 return wa()->getDataUrl($path, true, 'shop', $absolute);
             } else {
-                return wa()->getDataUrl('thumb.php/'.$path, true, 'shop', $absolute);
+                $path = str_replace('products/', 'products/thumb.php/', $path);
+                return wa()->getDataUrl($path, true, 'shop', $absolute);
             }
         }
     }
@@ -241,9 +257,9 @@ class shopImage
     /**
      * Calculate dimensions of thumbnail
      *
-     * @param array $photo Key-value object with image info
+     * @param array $image Key-value object with image info
      * @param string $size string size-code or key-value object returned by parseSize
-     * @returns array Key-value object with width and height values
+     * @return array Key-value object with width and height values
      */
     public static function getThumbDimensions($image, $size = null)
     {

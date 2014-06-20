@@ -43,7 +43,7 @@ class waAutoload
 
         ini_set('unserialize_callback_func', 'spl_autoload_call');
         if (false === spl_autoload_register(array(self::getInstance(), 'autoload'))) {
-            throw new waException(sprintf('Unable to register %s::autoload as an autoloading method.', get_class(self::getInstance())));
+            throw new Exception(sprintf('Unable to register %s::autoload as an autoloading method.', get_class(self::getInstance())));
         }
 
         self::$registered = true;
@@ -64,15 +64,13 @@ class waAutoload
     {
         if ($path = $this->get($class)) {
             if (!file_exists($path)) {
-                throw new waException(sprintf('Not found file [%1$s] for class [%2$s]', $path, $class));
+                throw new Exception(sprintf('Not found file [%1$s] for class [%2$s]', $path, $class));
             }
             require $path;
             if (!class_exists($class, false) && !interface_exists($class, false)) {
-               throw new waException(sprintf('Not found class [%2$s] at file [%1$s]', $path, $class));
+               throw new Exception(sprintf('Not found class [%2$s] at file [%1$s]', $path, $class));
             }
-            return true;
         }
-        return false;
     }
 
     public function get($class)
@@ -87,6 +85,7 @@ class waAutoload
         } elseif (substr($class, 0, 4) === 'waDb') {
             return $this->base_path.'/wa-system/database/'.$class.'.class.php';
         } elseif (substr($class, 0, 2) == 'wa') {
+            if (strpos($class, '.') !== false) return null;
             $dir = preg_replace("/^wai?([A-Z][a-z]+).*?$/", "$1", $class);
             $path = $this->base_path.'/wa-system/'.strtolower($dir).'/'.$class.'.'.(substr($class, 0, 3) === 'wai' ? 'interface' : 'class').'.php';
             if (file_exists($path)) {
@@ -172,6 +171,8 @@ class waAutoload
         'waForgotPasswordAction'   => 'controller/waForgotPasswordAction.class.php',
         'waSignupAction'           => 'controller/waSignupAction.class.php',
         'waLongActionController'   => 'controller/waLongActionController.class.php',
+        'waMyNavAction'            => 'controller/waMyNavAction.class.php',
+        'waMyProfileAction'        => 'controller/waMyProfileAction.class.php',
         'waViewAction'             => 'controller/waViewAction.class.php',
         'waViewActions'            => 'controller/waViewActions.class.php',
         'waViewController'         => 'controller/waViewController.class.php',
@@ -265,6 +266,8 @@ class waAutoload
 
         'waSystem'                 => 'waSystem.class.php',
 
+        'waApiTokensModel'         => 'webasyst/lib/models/waApiTokens.model.php',
+        'waApiAuthCodesModel'      => 'webasyst/lib/models/waApiAuthCodes.model.php',
         'waAppSettingsModel'       => 'webasyst/lib/models/waAppSettings.model.php',
         'waAnnouncementModel'      => 'webasyst/lib/models/waAnnouncement.model.php',
         'waContactModel'           => 'webasyst/lib/models/waContact.model.php',
@@ -275,10 +278,10 @@ class waAutoload
         'waContactEmailsModel'     => 'webasyst/lib/models/waContactEmails.model.php',
         'waContactRightsModel'     => 'webasyst/lib/models/waContactRights.model.php',
         'waContactSettingsModel'   => 'webasyst/lib/models/waContactSettings.model.php',
-        'waContactTokensModel'     => 'webasyst/lib/models/waContactTokens.model.php',
-      'waContactFieldValuesModel' => 'webasyst/lib/models/waContactFieldValues.model.php',
+        'waContactFieldValuesModel' => 'webasyst/lib/models/waContactFieldValues.model.php',
         'waCountryModel'           => 'webasyst/lib/models/waCountry.model.php',
         'waGroupModel'             => 'webasyst/lib/models/waGroup.model.php',
+        'waLogModel'          => 'webasyst/lib/models/waLog.model.php',
         'waLoginLogModel'          => 'webasyst/lib/models/waLoginLog.model.php',
         'waUserGroupsModel'        => 'webasyst/lib/models/waUserGroups.model.php',
         'waRegionModel'            => 'webasyst/lib/models/waRegion.model.php',

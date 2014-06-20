@@ -4,7 +4,8 @@ class waContactsCollection
 {
     protected $hash;
 
-    protected $order_by;
+    protected $fields = array();
+    protected $order_by = 'c.id';
     protected $group_by;
     protected $where;
     protected $where_fields = array();
@@ -111,7 +112,11 @@ class waContactsCollection
             $this->post_fields['_internal'] = array('_online_status');
             $this->post_fields['email'] = array('email');
             $this->post_fields['data'] = array();
-            return 'c.'.implode(",c.", $fields);
+            $result = 'c.'.implode(",c.", $fields);
+            foreach($this->fields as $alias => $expr) {
+                $result .= ",".$expr.' AS '.$alias;
+            }
+            return $result;
         }
 
         $required_fields = array('id' => 'c'); // field => table, to be added later in any case
@@ -149,6 +154,10 @@ class waContactsCollection
 
         foreach ($required_fields as $field => $table) {
             $fields[] = ($table ? $table."." : '').$field;
+        }
+
+        foreach($this->fields as $alias => $expr) {
+            $fields[] = $expr.' AS '.$alias;
         }
 
         return implode(",", $fields);
@@ -606,6 +615,55 @@ class waContactsCollection
 
         return $sql;
     }
+    
+    public function getContactOffset($contact)
+    {
+        $this->prepare();
+        $order = explode(',', $this->order_by);
+        
+        if (count($order) == 3) {
+            $this->where['_offset'] = '('.$this->getContactOffsetCondition($contact, $order[0]).' OR ('.
+            $this->getContactOffsetCondition($contact, $order[0], true). ' AND '.$this->getContactOffsetCondition($contact, $order[1]).' ) OR ('.
+                $this->getContactOffsetCondition($contact, $order[0], true). ' AND '.
+                $this->getContactOffsetCondition($contact, $order[1], true). ' AND '.
+                $this->getContactOffsetCondition($contact, $order[2]). '))';
+        } else if (count($order) == 2) {
+            $this->where['_offset'] = '('.$this->getContactOffsetCondition($contact, $order[0]).' OR ('.
+            $this->getContactOffsetCondition($contact, $order[0], true). ' AND '.$this->getContactOffsetCondition($contact, $order[1]).' ))';
+        } else {
+            $this->where['_offset'] = $this->getContactOffsetCondition($contact, $order[0]);
+        }
+        
+        $sql = "SELECT COUNT(".($this->joins ? 'DISTINCT ' : '')."c.id) ".$this->getSQL();
+        // remove condition
+        unset($this->where['_offset']);
+        // return count
+        
+        return (int)$this->getModel()->query($sql)->fetchField();
+    }
+    
+    protected function getContactOffsetCondition($contact, $order, $eq = false)
+    {
+        $order = trim($order);
+        $order = explode(' ', $order);
+
+        if (!isset($order[1])) {
+            $order[1] = 'asc';
+        }
+        $order[1] = strtolower($order[1]);
+        if (strstr($order[0], '.') !== false) {
+            list($t, $f) = explode('.', $order[0]);
+        } else {
+            $f = $order[0];
+        }
+        $v = $contact[$f];
+        
+        $model = $this->getModel();
+        $v = $model->escape($v);
+        
+        // return condition
+        return $order[0].($eq ? ' = ' : ($order[1] == 'asc' ? ' < ': ' > '))."'$v'";
+    }
 
     /**
      * Save requested fields of the collection in temporary table
@@ -663,13 +721,14 @@ class waContactsCollection
         }
         $field = trim($field);
         if ($field == '~data') {
+            $this->fields['data_count'] = 'count(*)';
             $this->joins[] = array(
                 'table' => 'wa_contact_data',
                 'alias' => 'd',
                 'type' => 'LEFT'
             );
             $this->group_by = 'c.id';
-            return $this->order_by = 'count(*) '.$order;
+            return $this->order_by = 'data_count '.$order;
         } else if ($field) {
             $contact_model = $this->getModel();
             if ($contact_model->fieldExists($field)) {

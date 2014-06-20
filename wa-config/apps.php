@@ -9,8 +9,7 @@ return array (
   'photos' => true,
   'blog' => true,
   'checklists' => true,
-  'guestbook2' => true,
   'dummy' => true,
-  'guestbook' => true,
+  'dislider' => true,
 );
 //EOF

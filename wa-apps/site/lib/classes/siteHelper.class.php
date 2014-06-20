@@ -31,6 +31,11 @@ class siteHelper
                 foreach (self::$domains as $d) {
                     $ds[] = $d['name'];
                 }
+                foreach ($routes as $r_id => $r) {
+                    if (!is_array($r)) {
+                        unset($routes[$r_id]);
+                    }
+                }
                 $new_domains = array_diff(array_keys($routes), $ds);
                 if ($new_domains) {
                     foreach ($new_domains as $d) {
@@ -93,6 +98,12 @@ class siteHelper
             }
         }    
         return self::$domain_id;   
+    }
+
+    public static function setDomain($id, $domain)
+    {
+        self::getDomains();
+        self::$domains[$id]['name'] = $domain;
     }
     
     public static function getDomain($key = 'name')

@@ -18,6 +18,7 @@ class waRequest
     const TYPE_STRING = 'string';
     const TYPE_STRING_TRIM = 'string_trim';
     const TYPE_ARRAY_INT = 'array_int';
+    const TYPE_ARRAY = 'array';
 
     protected static $params = array();
 
@@ -30,7 +31,7 @@ class waRequest
             case self::TYPE_INT:
                 return (int)$val;
             case self::TYPE_STRING_TRIM:
-                return trim($val);
+                return trim(self::cast($val, self::TYPE_STRING));
             case self::TYPE_ARRAY_INT:
                 if (!is_array($val)) {
                     $val = explode(",", $val);
@@ -47,9 +48,14 @@ class waRequest
                         $val = null;
                     }
                 }
-            default:
-                return $val;
+                break;
+            case self::TYPE_ARRAY:
+                if (!is_array($val)) {
+                    $val = (array) $val;
+                }
+                break;
         }
+        return $val;
     }
 
     public static function post($name = null, $default = null, $type = null)
@@ -296,12 +302,20 @@ class waRequest
 
     public static function getTheme()
     {
-        $key = $app_id =  wa()->getConfig()->getApplication();
-        $key .= '/'.wa()->getRouting()->getDomain().'/theme';
+        $app_id =  wa()->getConfig()->getApplication();
+        $key = wa()->getRouting()->getDomain().'/theme';
         if (($theme_hash = self::get('theme_hash')) && ($theme = self::get('set_force_theme')) !== null) {
             $app_settings_model = new waAppSettingsModel();
             $hash = $app_settings_model->get($app_id, 'theme_hash');
+            $global_hash = $app_settings_model->get('webasyst', 'theme_hash');
             if ($theme_hash == md5($hash)) {
+                if ($theme && waTheme::exists($theme)) {
+                    wa()->getStorage()->set($app_id.'/'.$key, $theme);
+                    return $theme;
+                } else {
+                    wa()->getStorage()->del($app_id.'/'.$key);
+                }
+            } elseif ($global_hash && $theme_hash == md5($global_hash)) {
                 if ($theme && waTheme::exists($theme)) {
                     wa()->getStorage()->set($key, $theme);
                     return $theme;
@@ -309,12 +323,29 @@ class waRequest
                     wa()->getStorage()->del($key);
                 }
             }
-        } elseif (($theme = wa()->getStorage()->get($key)) && waTheme::exists($theme)) {
+        } elseif ((($theme = wa()->getStorage()->get($app_id.'/'.$key)) || ($theme = wa()->getStorage()->get($key))) && waTheme::exists($theme)) {
             return $theme;
         }
         if (self::isMobile()) {
             return self::param('theme_mobile', 'default');
         }
         return self::param('theme', 'default');
+    }
+
+    public static function isHttps()
+    {
+        if(!empty($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] == 'https') {
+            return true;
+        }
+        if (!empty($_SERVER['HTTP_X_HTTPS']) && strtolower($_SERVER['HTTP_X_HTTPS']) != 'off') {
+            return true;
+        }
+        if (!empty($_SERVER['HTTPS']) && (strtolower($_SERVER['HTTPS']) == 'on' || $_SERVER['HTTPS'] == '1')) {
+            return true;
+        }
+        if (!empty($_SERVER['HTTP_HTTPS']) && (strtolower($_SERVER['HTTP_HTTPS']) == 'on' || $_SERVER['HTTP_HTTPS'] == '1')) {
+            return true;
+        }        
+        return false;
     }
 }

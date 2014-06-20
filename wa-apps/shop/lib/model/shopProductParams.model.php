@@ -24,6 +24,7 @@ class shopProductParamsModel extends waModel implements shopProductStorageInterf
      *
      * @param int $id product ID
      * @param array|null $params key=>value format of array or null (to delete all params assigned to product)
+     * @return bool
      */
     public function set($id, $params = array())
     {
@@ -86,6 +87,7 @@ class shopProductParamsModel extends waModel implements shopProductStorageInterf
      * Shortcut for set($id, null)
      *
      * @param int $id product ID
+     * @return bool
      */
     public function clear($id)
     {
@@ -94,7 +96,8 @@ class shopProductParamsModel extends waModel implements shopProductStorageInterf
 
     /**
      * Triggered on mass product deleting
-     * @param array $product_ids
+     * @param int[] $product_ids
+     * @return bool
      */
     public function deleteByProducts(array $product_ids)
     {
@@ -114,7 +117,7 @@ class shopProductParamsModel extends waModel implements shopProductStorageInterf
         $ar = array();
         if (!empty($params)) {
             foreach (explode("\n", $params) as $param_str) {
-                $param = explode('=', $param_str);
+                $param = explode('=', $param_str, 2);
                 if (count($param) > 1) {
                     $ar[$param[0]] = trim($param[1]);
                 }

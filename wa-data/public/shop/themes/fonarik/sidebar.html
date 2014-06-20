@@ -12,32 +12,33 @@
     {/if}
 
     <!-- category tree -->
- {if $categories = $wa->shop->categories()} 
- 
-  {foreach $categories as $c}
-   {if $category.id == $c.parent_id OR ($category.parent_id == $c.parent_id && $c.parent_id != 0)}
-   {$childs= 1}
-   {/if}
-  {/foreach}
-  {if $childs}
-  <aside id="categories_nav">
-	<h3>Подкатегории:</h3>            
-	<nav class="left_menu"><ul>
-        {foreach $categories as $c}
-        {if $category.id == $c.parent_id OR ($category.parent_id == $c.parent_id && $c.parent_id != 0)}
-        <li {if $category.id == $c.id}class="current"{/if}><a href="{$c.url}">{$c.name|escape}</a></li>
-        {/if} 
-        {/foreach}
-     </ul></nav><!-- .left_menu -->
-  </aside>
-  {/if}
-  
+{if $categories = $wa->shop->categories()} 
+
+    {$childs = 0}
+    {foreach $categories as $c}
+        {if isset($category) && ( $category.id == $c.parent_id OR ($category.parent_id == $c.parent_id && $c.parent_id != 0) )}
+            {$childs= 1}
+        {/if}
+    {/foreach}
+    {if $childs}
+    <aside id="categories_nav">
+        <h3>Подкатегории:</h3>            
+        <nav class="left_menu"><ul>
+          {foreach $categories as $c}
+            {if isset($category) && ( $category.id == $c.parent_id OR ($category.parent_id == $c.parent_id && $c.parent_id != 0) )}
+            <li {if isset($category) && $category.id == $c.id}class="current"{/if}><a href="{$c.url}">{$c.name|escape}</a></li>
+            {/if} 
+          {/foreach}
+        </ul></nav><!-- .left_menu -->
+    </aside>
+ {/if}
+
     <aside id="categories_nav">
 		<h3>Категории</h3>            
 		<nav class="left_menu"><ul>
         {foreach $categories as $c}
         {if $c.parent_id == 0}
-        <li {if $category.id == $c.id}class="current"{/if}><a href="{$c.url}">{$c.name|escape}</a></li>
+        <li {if isset($category) && $category.id == $c.id}class="current"{/if}><a href="{$c.url}">{$c.name|escape}</a></li>
         {/if}
         {/foreach}
      </ul></nav><!-- .left_menu -->
@@ -45,7 +46,7 @@
 
  {/if}
     
-    {if $wa->get($filter.code, array())}
+    {if isset($filter) && $wa->get($filter.code, array())}
      <aside>
 		     <h3>Выбранные фильтры:</h3>	
              	     

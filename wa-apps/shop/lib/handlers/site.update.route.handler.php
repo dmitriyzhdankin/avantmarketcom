@@ -9,7 +9,13 @@ class shopSiteUpdateRouteHandler extends waEventHandler
      */
     public function execute(&$params)
     {
-        $category_model = new shopCategoryModel();
-        $category_model->updateByField(array('route' => $params['old']), array('route' => $params['new']));
+        $model = new shopCategoryRoutesModel();
+        $model->updateByField(array('route' => $params['old']), array('route' => $params['new']));
+        
+        $notification_model = new shopNotificationModel();
+        $notification_model->updateByField(array('source' => $params['old']), array('source' => $params['new']));
+        
+        $followup_model = new shopFollowupModel();
+        $followup_model->updateByField(array('source' => $params['old']), array('source' => $params['new']));
     }
 }

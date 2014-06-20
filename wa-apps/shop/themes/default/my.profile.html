@@ -1,3 +1,5 @@
+{$wa->myNav('menu-h bottom-padded')}
+
 <h1>[`My profile`]</h1>
 
 {if $saved}
@@ -16,3 +18,5 @@
     </div>
 </div>
 </form>
+
+{$wa->globals('isMyAccount', true)}

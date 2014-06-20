@@ -68,8 +68,8 @@
 
         /**
          * @param {Array} args
-         * @param {object} scope
-         * @param {String} name
+         * @param {Object} scope
+         * @param {String=} name
          * @return {'name':{String},'params':[]}
          */
         getMethod: function(args, scope, name) {
@@ -214,6 +214,103 @@
             }
         },
 
+
+        /**
+        * Make input (or textarea) with field_id flexible, 
+        * what means that depends on length and threshold this field turn into input or textarea and back
+        * 
+        * @param String field_id
+        * @param Number threshold (default 50)
+        */
+        makeFlexibleInput: function(field_id, threshold) {
+            var timeout = 250;
+            threshold = threshold || 50;
+            var height = 45;
+            var timer_id = null;
+            field_id = '#' + field_id;
+            var field = $(field_id);
+            
+            var onFocus = function() {
+                this.selectionStart = this.selectionEnd = this.value.length;
+            };
+            var handler = function() {
+                if (timer_id) {
+                    clearTimeout(timer_id);
+                    timer_id = null;
+                }
+                timer_id = setTimeout(function() {
+                    var val = field.val();
+                    if (val.length > threshold && field.is('input')) {
+                        var textarea = $.shop.input2textarea(field);
+                        textarea.css('height', height);
+                        field.replaceWith(textarea);
+                        field = textarea;
+                        field.focus();
+                    } else if (val.length <= threshold && field.is('textarea')) {
+                        var input = $.shop.textarea2input(field);
+                        input.css('height', '');
+                        field.replaceWith(input);
+                        field = input;
+                        field.focus();
+                    }
+                }, timeout);
+            };
+            
+            var p = field.parent();
+            p.off('keydown', field_id).
+                on('keydown',  field_id, handler);
+            p.off('focus',    field_id).
+                on('focus',     field_id, onFocus);
+        
+            // initial shot
+            handler();
+        },
+
+        input2textarea: function(input) {
+            var p = input.parent();
+            var rm = false;
+            if (!p.length) {
+                p = $('<div></div>');
+                p.append(input);
+                rm = true;
+            }
+            var val = input.val();
+            
+            var html = p.html();
+            html = html.replace(/value(\s*?=\s*?['"][\s\S]*?['"])*/, '');
+            html = html.replace(/type\s*?=\s*?['"]text['"]/, '');
+            html = html.replace('input', 'textarea');
+            html = html.replace(/(\/\s*?>|>)/, '>' + val  + '</textarea>');
+            
+            if (rm) {
+                p.remove();
+            }
+            
+            return $(html);
+            
+        },
+                
+        textarea2input: function(textarea) {
+            var p = textarea.parent();
+            var rm = false;
+            if (!p.length) {
+                p = $('<div></div>');
+                p.append(textarea);
+                rm = true;
+            }
+            var val = textarea.val();
+            
+            var html = p.html();
+            html = html.replace('textarea', 'input type="text" value="' + val + '"');
+            html = html.replace('</textarea>', '');
+            
+            if (rm) {
+                p.remove();
+            }
+
+            return $(html);
+        },
+
         helper: {
             /**
              * @param {String} params
@@ -252,10 +349,10 @@
 
                 var $body = $(el).parents($(el).data('selector') || 'div.block').parent().clone(false);
                 $body.find('a.js-print').remove();
-                var html = '<html><head>' + $head.html() + '<style type="text/css" media="print">* {overflow:visible !important; }</style></head><body class="s-printable">' + $body.html()
+                var html = '<html><head>' + $head.html() + '</head><body class="s-printable">' + $body.html()
                 + '<i class="icon16 loading" style="top: 20px; left: 20px; position: relative;display: none;"></i>' + '</body></html>';
-          
-                var wnd = window.open('', '_blank', 'menubar=yes,location=yes,resizable=yes,scrollbars=yes,status=yes');
+
+                var wnd = window.open('', 'printversion', 'scrollbars=1,width=600,height=600');
                 setTimeout(function() {
                     var $w = $(wnd.document);
                     $w.find('div:first').hide();
@@ -269,7 +366,7 @@
                 wnd.document.open();
                 wnd.document.write(html);
                 wnd.document.close();
-                wnd.focus();
+
                 return false;
             }
         }

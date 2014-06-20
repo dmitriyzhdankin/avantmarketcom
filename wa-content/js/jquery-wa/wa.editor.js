@@ -216,9 +216,10 @@ function waEditorInit(options) {
             $(this).attr('src', $(this).attr('data-src'));
         });
 
+        waEditorUpdateSource(options);
         $(".el-rte").hide();
         $("div.CodeMirror-wrap").show();
-        wa_editor.setValue(element.elrte('val'));
+        wa_editor.refresh();
         wa_editor.focus();
         return false;
     });

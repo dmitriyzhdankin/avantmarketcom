@@ -8,11 +8,12 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Plural-Forms: nplurals=3; plural=((((n%10)==1)&&((n%100)!=11))?(0):(((((n%10)"
-">=2)&&((n%10)<=4))&&(((n%100)<10)||((n%100)>=20)))?(1):2));\n"
+"Plural-Forms: nplurals=3; plural=((((n%10)==1)&&((n%100)!=11))?(0):(((((n"
+"%10)>=2)&&((n%10)<=4))&&(((n%100)<10)||((n%100)>=20)))?(1):2));\n"
 "X-Poedit-SourceCharset: utf-8\n"
 "X-Poedit-Basepath: .\n"
-"X-Generator: Poedit 1.5.5\n"
+"X-Generator: Poedit 1.6.4\n"
+"Language: ru_RU\n"
 "X-Poedit-SearchPath-0: .\n"
 "X-Poedit-SearchPath-1: .\n"
 
@@ -50,7 +51,7 @@ msgstr "Архив записей"
 
 #: /wa-apps/blog/templates/actions/backend/BackendCalendar.html:58
 msgid "Click to create a post scheduled to be published on this day"
-msgstr "Щёлкните, чтобы создать запись с датой публикации в этот день"
+msgstr "Щелкните, чтобы создать запись с датой публикации в этот день"
 
 #: /wa-apps/blog/templates/actions/backend/BackendSidebar.html:29
 msgid "Comments"
@@ -206,7 +207,7 @@ msgstr "Опубликовано"
 
 #: /wa-apps/blog/templates/actions/post/PostEdit.html:98
 msgid "WYSIWYG"
-msgstr "WYSIWYG"
+msgstr "Визуальный редактор"
 
 #: /wa-apps/blog/templates/actions/post/PostEdit.html:147
 msgid "Publication deadline"
@@ -258,7 +259,7 @@ msgstr "Максимум %d символов"
 
 #: /wa-apps/blog/lib/actions/backend/blogBackend.action.php:51
 msgid "Access denied"
-msgstr "Доступ запрещён"
+msgstr "Доступ запрещен"
 
 #: /wa-apps/blog/lib/actions/frontend/blogFrontendPost.action.php:73
 msgid "Post not found"
@@ -412,7 +413,7 @@ msgstr "отключенная запись"
 
 #: /wa-apps/blog/templates/actions/comments/include.comment.html:47
 msgid "Comment deleted"
-msgstr "Комментарий удалён"
+msgstr "Комментарий удален"
 
 #: /wa-apps/blog/templates/actions/comments/include.comment.html:43
 msgid "Comment for unpublished post"
@@ -420,7 +421,7 @@ msgstr "Комментарий к отключенной записи"
 
 #: /wa-apps/blog/templates/actions/comments/include.comment.html:47
 msgid "in reply to"
-msgstr "ответ на"
+msgstr "ответ на комментарий"
 
 #: /wa-apps/blog/templates/actions/post/PostEdit.html:8
 msgid "Allow comments"
@@ -476,10 +477,6 @@ msgstr "Сохранено"
 msgid "Unpublish this blog post?"
 msgstr "Отменить публикацию записи?"
 
-#: /wa-apps/blog/templates/actions/post/PostEdit.html:360
-msgid "Split vertical"
-msgstr "Вертикальное разделение"
-
 #: /wa-apps/blog/templates/actions/settings/Settings.html:7
 msgid "Settings updated"
 msgstr "Настройки сохранены"
@@ -490,15 +487,15 @@ msgstr "Личные настройки"
 
 #: /wa-apps/blog/templates/actions/settings/Settings.html:22
 msgid "App icon counter"
-msgstr "Счётчик на иконке"
+msgstr "Счетчик на иконке"
 
 #: /wa-apps/blog/templates/actions/settings/Settings.html:58
 msgid "Frontend settings"
 msgstr "Настройки общедоступной части"
 
 #: /wa-apps/blog/templates/actions/settings/Settings.html:63
-msgid "Homepage title"
-msgstr "Заголовок главной страницы"
+msgid "Homepage &lt;title&gt;"
+msgstr "Заголовок главной страницы &lt;title&gt;"
 
 #: /wa-apps/blog/templates/actions/settings/Settings.html:72
 msgid "Title format"
@@ -595,8 +592,8 @@ msgstr "Переместить записи"
 #: /wa-apps/blog/templates/dialogs/postSchedule.html:26
 msgid "Cron is working properly. Latest execution time: %s"
 msgstr ""
-"CRON для приложения «Блог» включен и работает. Время последнего запуска: "
-"<strong>%s</strong>"
+"CRON для отложенной публикации записей включен и работает. Время последнего "
+"запуска: <strong>%s</strong>"
 
 #: /wa-apps/blog/templates/dialogs/postSchedule.html:30
 msgid ""
@@ -604,13 +601,13 @@ msgid ""
 "app, which is not the case for this installation. Setup cron for the Blog "
 "app with the following command (<a href=\"http://www.webasyst.com/ru/"
 "framework/docs/server/cron/\" target=\"_blank\">cron setup instructions</a>):"
-"<br /><br /> <strong>%s</strong>"
+"<br /><br /> <strong class=\"cron-command\">%s</strong>"
 msgstr ""
 "Для работы запланированной публикации необходимо настроить CRON, что "
 "позволит приложению «Блог» выполнять действия по расписанию без участия "
-"пользователя. Инструкция для CRON (<a href=\"http://www.webasyst.com/ru/"
-"framework/docs/server/cron/\" target=\"_blank\">документация по настройке</"
-"a>):<br /><br /> <strong>%s</strong>"
+"пользователя. Инструкция для CRON (<a href=\"http://www.webasyst.ru/"
+"developers/docs/tips/cron/\" target=\"_blank\">документация по настройке</"
+"a>):<br /><br /> <strong class=\"cron-command\">%s</strong>"
 
 #: /wa-apps/blog/lib/classes/blogFrontController.class.php:54
 msgid "Blog not found"
@@ -689,7 +686,7 @@ msgstr "Адрес %subject% уже используется. Введите д�
 
 #: /wa-apps/blog/lib/classes/blogSlugValidator.class.php:33
 msgid "%subject% URL is invalid"
-msgstr "Адрес %subject% введён некорректно"
+msgstr "Адрес %subject% введен некорректно"
 
 #: /wa-apps/blog/lib/config/blogRightConfig.class.php:14
 msgid "Can create new blogs"
@@ -697,7 +694,7 @@ msgstr "Может создавать новые блоги"
 
 #: /wa-apps/blog/lib/config/blogRightConfig.class.php:24
 msgid "No access"
-msgstr "Доступ запрещён"
+msgstr "Доступ запрещен"
 
 #: /wa-apps/blog/lib/config/blogRightConfig.class.php:25
 msgid "Read only"
@@ -1075,3 +1072,345 @@ msgstr "Теги"
 #: /wa-apps/blog/themes/custom/content.html:72
 msgid "More"
 msgstr "Еще"
+
+#: /wa-apps/blog/themes/_webasystcom/post.html:129
+msgid "Имя"
+msgstr ""
+
+#: /wa-apps/blog/themes/_webasystcom/post.html:153
+msgid "выйти"
+msgstr ""
+
+#: /wa-apps/blog/themes/_webasystcom/stream.html:71
+msgid "no posts"
+msgstr "нет записей"
+
+#: /wa-apps/blog/themes/sidebar/footer.html:4
+msgid ""
+"We are using <a href=\"http://www.webasyst.com/store/app/blog/\">Webasyst "
+"Blog</a>"
+msgstr ""
+"Мы используем <a href=\"http://www.webasyst.ru/store/app/blog/\">Webasyst "
+"Блог</a>"
+
+#: /wa-apps/blog/themes/vk/footer.html:4
+msgid ""
+"We are using <a href=\"http://www.webasyst.com/store/app/blog/\" target="
+"\"_blank\">Webasyst Blog</a>"
+msgstr ""
+"Мы используем <a href=\"http://www.webasyst.ru/store/app/blog/\" target="
+"\"_blank\">Webasyst Блог</a>"
+
+#: /wa-apps/blog/templates/actions/backend/Backend.html:265
+msgid "There are no posts in this view."
+msgstr "Нет записей."
+
+#: /wa-apps/blog/templates/actions/backend/BackendSidebar.html:98
+msgid "My drafts"
+msgstr "Мои черновики"
+
+#: /wa-apps/blog/templates/actions/backend/BackendSidebar.html:100
+msgid "all drafts"
+msgstr "все"
+
+#: /wa-apps/blog/templates/actions/backend/BackendSidebar.html:101
+msgid "my drafts"
+msgstr "только мои"
+
+#: /wa-apps/blog/templates/actions/comments/Comments.html:34
+msgid "All blogs"
+msgstr "Все блоги"
+
+#: /wa-apps/blog/templates/actions/comments/Comments.html:36
+msgid "My posts only"
+msgstr "Мои записи"
+
+#: /wa-apps/blog/templates/actions/comments/Comments.html:47
+msgid "There are no comments in this view."
+msgstr "Нет комментариев."
+
+#: /wa-apps/blog/templates/actions/comments/Comments.html:66
+msgid "Loading next %d comment..."
+msgid_plural "Loading next %d comments..."
+msgstr[0] "Загрузка следующего %d комментария…"
+msgstr[1] "Загрузка следующих %d комментариев…"
+msgstr[2] "Загрузка следующих %d комментариев…"
+
+#: /wa-apps/blog/templates/actions/plugins/Plugins.html:35
+msgid "Browse for new plugins"
+msgstr "Поиск плагинов"
+
+#: /wa-apps/blog/templates/actions/plugins/Plugins.html:38
+msgid "Use Installer to install new plugins from the Webasyst Store"
+msgstr ""
+"Устанавливайте плагины из магазина Webasyst с помощью приложения «Инсталлер»"
+
+#: /wa-apps/blog/templates/actions/post/PostEdit.html:92
+msgid "Meta"
+msgstr "Мета"
+
+#: /wa-apps/blog/templates/actions/post/PostEdit.html:96
+#: /wa-apps/blog/templates/dialogs/postEditCustomParams.html:10
+msgid "Title"
+msgstr "Заголовок"
+
+#: /wa-apps/blog/templates/actions/post/PostEdit.html:99
+#: /wa-apps/blog/templates/dialogs/postEditCustomParams.html:18
+msgid "Meta Keywords"
+msgstr "Meta Keywords"
+
+#: /wa-apps/blog/templates/actions/post/PostEdit.html:102
+#: /wa-apps/blog/templates/dialogs/postEditCustomParams.html:24
+msgid "Meta Description"
+msgstr "Meta Description"
+
+#: /wa-apps/blog/templates/actions/post/PostEdit.html:108
+msgid "No meta parameters are defined for this blog post."
+msgstr "Для этой записи мета-параметры не заданы."
+
+#: /wa-apps/blog/templates/actions/post/PostEdit.html:110
+msgid "Edit meta"
+msgstr "Редактировать"
+
+#: /wa-apps/blog/templates/actions/post/PostEdit.html:183
+msgid "Post title"
+msgstr "Заголовок"
+
+#: /wa-apps/blog/templates/actions/post/PostEdit.html:382
+msgid "Post cut (Continue reading &rarr;)"
+msgstr "Кат (Читать далее &rarr;)"
+
+#: /wa-apps/blog/templates/actions/settings/Settings.html:16
+msgid "My personal settings"
+msgstr "Личные настройки"
+
+#: /wa-apps/blog/templates/actions/settings/Settings.html:53
+msgid "Deadlines"
+msgstr "Дедлайны"
+
+#: /wa-apps/blog/templates/actions/settings/Settings.html:59
+msgid "Remind me about my scheduled posts"
+msgstr "Напоминать мне о моих запланированных публикациях"
+
+#: /wa-apps/blog/templates/actions/settings/Settings.html:62
+msgid "When publication is overdue"
+msgstr "Когда публикация просрочена"
+
+#: /wa-apps/blog/templates/actions/settings/Settings.html:63
+msgid "1 day before publication deadline"
+msgstr "За 1 день до запланированной публикации"
+
+#: /wa-apps/blog/templates/actions/settings/Settings.html:64
+msgid "2 days before publication deadline"
+msgstr "За 2 дня до запланированной публикации"
+
+#: /wa-apps/blog/templates/actions/settings/Settings.html:65
+msgid "3 days before publication deadline"
+msgstr "За 3 дня до запланированной публикации"
+
+#: /wa-apps/blog/templates/actions/settings/Settings.html:66
+msgid "A week before publication deadline"
+msgstr "За неделю до запланированной публикации"
+
+#: /wa-apps/blog/templates/actions/settings/Settings.html:76
+msgid ""
+"Reminders require CRON to be properly setup for the Blog app, which is not "
+"the case for this installation. Setup cron for the Blog app with the "
+"following command (<a href=\"http://www.webasyst.com/ru/framework/docs/"
+"server/cron/\" target=\"_blank\">cron setup instructions</a>):<br /><br /> "
+"<strong class=\"cron-command\">%s</strong>"
+msgstr ""
+"Для работы напоминаний необходимо настроить CRON, что позволит приложению "
+"«Блог» выполнять действия по расписанию без участия пользователя. Команда "
+"для CRON (<a href=\"http://www.webasyst.ru/developers/docs/tips/cron/\" "
+"target=\"_blank\">документация по настройке</a>):<br /><br /> <strong class="
+"\"cron-command\">%s</strong>"
+
+#: /wa-apps/blog/templates/actions/settings/Settings.html:140
+msgid "Recommended range is from 10 to 25"
+msgstr "Рекомендуемый диапазон: от 10 до 25"
+
+#: /wa-apps/blog/templates/actions/settings/Settings.html:150
+msgid "Author’s email address"
+msgstr "Email автора записи"
+
+#: /wa-apps/blog/templates/actions/settings/Settings.html:151
+msgid "%s for your blog posts"
+msgstr "для ваших записей: %s"
+
+#: /wa-apps/blog/templates/actions/settings/Settings.html:157
+msgid "No author tag"
+msgstr "Не указывать тег author"
+
+#: /wa-apps/blog/js/elrte-blog.js:4
+msgid "Post cut"
+msgstr "Кат"
+
+#: /wa-apps/blog/lib/config/site.php:85 /wa-apps/blog/lib/config/site.php:99
+msgid "As specified"
+msgstr "Указать явно"
+
+#: /wa-apps/blog/themes/_webasystcom/stream.html:79
+#: /wa-apps/blog/themes/clear/stream.html:21
+#: /wa-apps/blog/themes/custom/stream.html:21
+#: /wa-apps/blog/themes/default/stream.html:21
+#: /wa-apps/blog/themes/facebook/stream.html:21
+#: /wa-apps/blog/themes/nifty/stream.html:21
+#: /wa-apps/blog/themes/sidebar/stream.html:21
+#: /wa-apps/blog/themes/vk/stream.html:21
+msgid "of %d post"
+msgid_plural "of %d posts"
+msgstr[0] "из %d записи"
+msgstr[1] "из %d записей"
+msgstr[2] "из %d записей"
+
+msgid "Notifications"
+msgstr "Уведомления"
+
+#: /wa-apps/blog/lib/cli/blogReminder.cli.php:82
+msgid "in %d day"
+msgid_plural "in %d days"
+msgstr[0] "через %d день"
+msgstr[1] "через %d дня"
+msgstr[2] "через %d дней"
+
+#: /wa-apps/blog/lib/cli/blogReminder.cli.php:71
+msgid ""
+"You have following posts scheduled for publication in the <strong>%s</"
+"strong> blog:"
+msgstr ""
+"У вас есть записи, запланированные к публикации в блоге «<strong>%s</"
+"strong>»:"
+
+#: /wa-apps/blog/lib/cli/blogReminder.cli.php:80
+msgid "today"
+msgstr "сегодня"
+
+#: /wa-apps/blog/lib/cli/blogReminder.cli.php:55
+msgid "Scheduled blog posts"
+msgstr "Запланированные публикации в блоге"
+
+#: /wa-apps/blog/templates/actions/settings/Settings.html:72
+msgid ""
+"Reminders will be sent to your <strong class=\"cron-command\">%s</strong> "
+"email address once a day. Cron for reminders is working properly. Latest "
+"execution time: %s"
+msgstr ""
+"Напоминания будут отправляться вам по почте по адресу <strong class=\"cron-"
+"command\">%s</strong> не чаще, чем раз в день. CRON, необходимый для работы "
+"напоминаний, включен и работает. Время последнего запуска: <strong>%s</"
+"strong>"
+
+#: /wa-apps/blog/lib/cli/blogReminder.cli.php:71
+msgid "You have blog posts scheduled for publication on the %s blog:"
+msgstr "У вас есть записи, запланированные к публикации в блоге «%s»:"
+
+#: /wa-apps/blog/templates/actions/backend/Backend.html:263
+msgid ""
+"Hello and welcome to your new blog!<br> Start by writing your first post."
+msgstr "Добро пожаловать в ваш новый блог!<br> Начните с создания записи."
+
+#: /wa-apps/blog/templates/actions/blog/BlogSettings.html:56
+msgid "Public blog URL"
+msgstr "Адрес блога"
+
+#: /wa-apps/blog/templates/actions/blog/BlogSettings.html:100
+msgid "A URL to view all posts of this blog on your public website."
+msgstr ""
+"Адрес, по которому на сайте можно посмотреть список всех записей этого блога."
+
+#: /wa-apps/blog/themes/clear/footer.html:4
+#: /wa-apps/blog/themes/default/index.html:109
+#: /wa-apps/blog/themes/nifty/footer.html:4
+#: /wa-apps/blog/themes/sidebar/footer.html:4
+#: /wa-apps/blog/themes/vk/footer.html:4
+msgid ""
+"<a href=\"http://www.webasyst.com/store/app/blog/\">Blogging platform</a> by "
+"Webasyst"
+msgstr ""
+"<a href=\"http://www.webasyst.ru/store/app/blog/\">Движок блога</a> — "
+"Webasyst"
+
+#: /wa-apps/blog/themes/clear/content.html:13
+#: /wa-apps/blog/themes/custom/content.html:98
+#: /wa-apps/blog/themes/default/index.html:114
+#: /wa-apps/blog/themes/facebook/content.html:22
+#: /wa-apps/blog/themes/nifty/content.html:11
+#: /wa-apps/blog/themes/sidebar/content.html:99
+#: /wa-apps/blog/themes/vk/content.html:22
+msgid "Welcome to your new blog!"
+msgstr "Добро пожаловать в ваш новый блог!"
+
+#: /wa-apps/blog/themes/clear/content.html:14
+#: /wa-apps/blog/themes/custom/content.html:99
+#: /wa-apps/blog/themes/default/index.html:115
+#: /wa-apps/blog/themes/facebook/content.html:23
+#: /wa-apps/blog/themes/nifty/content.html:12
+#: /wa-apps/blog/themes/sidebar/content.html:100
+#: /wa-apps/blog/themes/vk/content.html:23
+msgid "Start by writing a post in your <a href=\"%s\">blog backend</a>."
+msgstr "Начните с создания записи в <a href=\"%s\">бекенде блога</a>."
+
+#: /wa-apps/blog/lib/config/logs.php:5
+msgid "published blog post"
+msgstr "опубликовал блог-пост"
+
+#: /wa-apps/blog/lib/config/logs.php:8
+msgid "edited blog post"
+msgstr "отредактировал блог-пост"
+
+#: /wa-apps/blog/lib/config/logs.php:11
+msgid "deleted blog post"
+msgstr "удалил блог-пост"
+
+#: /wa-apps/blog/lib/config/logs.php:15
+msgid "added comment to blog post"
+msgstr "добавил комментарий в блоге"
+
+#: /wa-apps/blog/lib/config/logs.php:18
+msgid "deleted comment to blog post"
+msgstr "удалил комментарий в блоге"
+
+#: /wa-apps/blog/lib/config/logs.php:21
+msgid "restored comment to blog post"
+msgstr "восстановил комментарий в блоге"
+
+#: /wa-apps/blog/lib/config/logs.php:25
+msgid "created a new blog"
+msgstr "создал новый блог"
+
+#: /wa-apps/blog/lib/config/logs.php:28
+msgid "deleted blog"
+msgstr "удалил блог"
+
+#: /wa-apps/blog/lib/config/logs.php:31
+msgid "modified blog settings"
+msgstr "изменил настройки блога"
+
+#: /wa-apps/blog/lib/config/site.php:90
+msgid "Homepage META Keywords"
+msgstr "META Keywords главной страницы"
+
+#: /wa-apps/blog/lib/config/site.php:94
+msgid "Homepage META Description"
+msgstr "META Description главной страницы"
+
+#: /wa-apps/blog/lib/config/site.php:98
+msgid "RSS feed title"
+msgstr "Заголовок RSS-ленты"
+
+#: /wa-apps/blog/themes/default/main.html:36
+msgid "Follow %s"
+msgstr "Читать %s"
+
+#: /wa-apps/blog/themes/default/main.html:40
+msgid "Facebook"
+msgstr "Фейсбук"
+
+#: /wa-apps/blog/themes/default/main.html:43
+msgid "Twitter"
+msgstr "Твиттер"
+
+#: /wa-apps/blog/themes/default/main.html:50
+msgid "VK"
+msgstr "ВКонтакте"

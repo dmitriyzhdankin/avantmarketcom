@@ -19,9 +19,9 @@ $.order_edit = {
     customer_inputs : null,
 
     /**
-     * {Object}
+     * {Array}
      */
-    stocks: {},
+    stocks: [],
 
     /**
      * On/off edit mode
@@ -43,11 +43,21 @@ $.order_edit = {
         this.form = typeof options.form === 'string' ? $(options.form) : options.form;
         this.customer_fields = $('#s-order-edit-customer');
         this.customer_inputs = this.customer_fields.find(':input');
+
+        options.stocks.sort(function(a, b) {
+            return a.sort - b.sort;
+        });
         this.stocks = options.stocks;
 
         if (options.title) {
             document.title = title;
         }
+        
+        if (!options.float_delimeter) {
+            options.float_delimeter = '.';
+        }
+        
+        this.float_delimeter = options.float_delimeter;
 
         this.initView();
     },
@@ -55,6 +65,30 @@ $.order_edit = {
     initView : function() {
         var options = this.options;
         this.initCustomerForm(this.id ? 'edit' : 'add');
+
+        // helpers and handlers here
+        var updateStockIcon = function(order_item) {
+            var select   = order_item.find('.s-orders-stock');
+            var option   = select.find('option:selected');
+            var sku_item = order_item.find('.s-orders-skus').
+                find('input[type=radio]:checked').
+                parents('li:first');
+
+            order_item.find('.s-orders-stock-icon-aggregate').show();
+            order_item.find('.s-orders-stock-icon').html('').hide();
+
+            // choose item to work with
+            var item = sku_item.length ?
+                sku_item :   // sku case
+                order_item;  // product case (one sku)
+
+            if (option.attr('data-icon')) {
+                item.find('.s-orders-stock-icon-aggregate').hide();
+                item.find('.s-orders-stock-icon').html(
+                    option.attr('data-icon')
+                ).show();
+            }
+        };
 
         $.order_edit.slide(true, options.mode == 'add');
 
@@ -68,13 +102,17 @@ $.order_edit = {
             return false;
         });
 
-        this.updateTotal();
+        this.updateTotal(false);
+        $('.s-order-item').each(function() {
+            var item = $(this);
+            updateStockIcon(item);
+        });
 
         var price_edit = options.price_edit || false;
 
         var add_order_input = $("#orders-add-autocomplete");
         add_order_input.autocomplete({
-            source : '?action=autocomplete&with_counts=1',
+            source : '?action=autocomplete&with_counts=1&with_sku_name=1',
             minLength : 3,
             delay : 300,
             select : function(event, ui) {
@@ -84,23 +122,29 @@ $.order_edit = {
                 var url = '?module=orders&action=getProduct&product_id=' + ui.item.id;
                 $.getJSON(url + ($.order_edit.id ? '&order_id=' + $.order_edit.id : ''), function(r) {
                     var table = $('#order-items');
-                    var order_items_tr = table.find('.s-order-item');
-                    var product = r.data;
-                    product.skus[product.sku_id].checked = true;
-
+                    var index = parseInt(table.find('.s-order-item:last').attr('data-index'), 10) + 1 || 1;
+                    var product = r.data.product;
+                    if (product.sku_id && product.skus[product.sku_id]) {
+                        product.skus[product.sku_id].checked = true;
+                    }
                     var add_row = $('#s-orders-add-row');
                     add_row.before(tmpl('template-order', {
                         data: r.data, options: {
-                            index: order_items_tr.length,
+                            index: index,
                             currency: $.order_edit.options.currency,
-                            stocks: $.order_edit.stocks
+                            stocks: $.order_edit.stocks,
+                            price_edit: price_edit
                         }
                     }));
-                    add_row.prev().find('.s-orders-services .s-orders-service-variant').trigger('change');
+                    var item = add_row.prev();
+                    //item.find('.s-orders-services .s-orders-service-variant').trigger('change');
 
                     $('#s-order-comment-edit').show();
 
                     $.order_edit.updateTotal();
+
+                    updateStockIcon(item);
+
                 });
                 add_order_input.val('');
 
@@ -108,55 +152,95 @@ $.order_edit = {
             }
         });
 
-        this.container.off('change', '.s-orders-skus input[type=radio]').on('change', '.s-orders-skus input[type=radio]',
-            function() {
-                var self = $(this);
-                var tr = self.parents('tr:first');
-                var sku_id = this.value;
-                var product_id = tr.attr('data-product-id');
-                var index = tr.attr('data-index');
-                var mode = $.order_edit.id ? 'edit' : 'add';
-                var item_id = null;
-                if (mode == 'edit') {
-                    item_id = parseInt(self.attr('name').replace('sku[edit][', ''), 10);
+        this.container.
+            off('change', '.s-orders-skus input[type=radio]').
+            on('change', '.s-orders-skus input[type=radio]',
+                function() {
+                    var self = $(this);
+                    var tr = self.parents('tr:first');
+                    var sku_id = this.value;
+                    var product_id = tr.attr('data-product-id');
+                    var index = tr.attr('data-index');
+                    var mode = $.order_edit.id ? 'edit' : 'add';
+                    var item_id = null;
+                    if (mode == 'edit') {
+                        item_id = parseInt(self.attr('name').replace('sku[edit][', ''), 10);
+                    }
+
+                    var url = '?module=orders&action=getProduct&product_id='+product_id+'&sku_id='+sku_id;
+                    $.getJSON(url + ($.order_edit.id ? '&order_id=' + $.order_edit.id : ''), function(r) {
+                        tr.find('.s-orders-services').replaceWith(
+                            tmpl('template-order-services', {
+                                services: r.data.sku.services,
+                                service_ids: r.data.service_ids,
+                                product_id: product_id,
+                                options: {
+                                    price_edit: price_edit,
+                                    index: index,
+                                    currency: $.order_edit.options.currency,
+                                    stocks: $.order_edit.stocks
+                                }
+                            })
+                        );
+                        //tr.find('.s-orders-services .s-orders-service-variant').trigger('change');
+                        tr.find('.s-orders-product-price').
+                            find('span').text(r.data.sku.price_str).end().
+                            find('input').val(r.data.sku.price);
+                        //.trigger('change');
+
+                        var ns;
+                        if (tr.find('input:first').attr('name').indexOf('add') !== -1) {
+                            ns = 'add';
+                        } else {
+                            ns = 'edit';
+                        }
+
+                        tr.find('.s-orders-product-stocks').replaceWith(
+                            tmpl('template-order-stocks-' + ns, {
+                                sku:     r.data.sku,
+                                index:   index,
+                                stocks:  $.order_edit.stocks,
+                                item_id: item_id   // use only for edit namespace
+                            })
+                        );
+
+                        updateStockIcon(tr);
+                        $.order_edit.updateTotal(tr);
+
+                    });
                 }
+            );
 
-                var url = '?module=orders&action=getProduct&product_id='+product_id+'&sku_id='+sku_id;
-                $.getJSON(url + ($.order_edit.id ? '&order_id=' + $.order_edit.id : ''), function(r) {
-                    tr.find('.s-orders-services').replaceWith(
-                        tmpl('template-order-services', {
-                            services: r.data.services,
-                            product_id: product_id,
-                            options: {
-                                price_edit: price_edit,
-                                index: index,
-                                currency: $.order_edit.options.currency,
-                                stocks: $.order_edit.stocks
-                            }
-                        })
-                    );
-                    tr.find('.s-orders-services .s-orders-service-variant').trigger('change');
-                    tr.find('.s-orders-product-price').
-                        find('span').text(r.data.price_str).end().
-                        find('input').val(r.data.price).trigger('change');
+        // change stocks select
+        this.container.
+            off('change', '.s-orders-stock').
+            on( 'change', '.s-orders-stock', function() {
+                var item = $(this).parents('tr.s-order-item:first');
+                updateStockIcon(item);
+            });
 
-                    tr.find('.s-orders-product-stocks').replaceWith(
-                        tmpl('template-order-stocks-' + mode, {
-                            sku:     r.data,
-                            index:   index,
-                            stocks:  $.order_edit.options.stocks,
-                            item_id: item_id   // use only in edit mode
-                        })
-                    );
-                });
-            }
-        );
-
-        this.container.off('change', '.s-orders-service-variant').on('change', '.s-orders-service-variant', function() {
-            var self = $(this);
-            var option = self.find('option:selected');
-            var li = self.parents('li:first');
-            li.find('.s-orders-service-price').val(option.attr('data-price'));
+        var updateServicePriceInput = function(variant_option, service_input, update_val) {
+                var price = variant_option.attr('data-price');
+                var percent_price = variant_option.attr('data-percent-price');
+                if (update_val) {
+                    service_input.val(price);
+                }
+                service_input.attr('data-price', price);
+                service_input.attr('data-percent-price', percent_price);
+        };
+        this.container.
+            off('change', '.s-orders-service-variant').
+            on('change', '.s-orders-service-variant', function() {
+                var self = $(this);
+                var option = self.find('option:selected');
+                var li = self.parents('li:first');
+                updateServicePriceInput(option, li.find('.s-orders-service-price'), true);
+        });
+        this.container.find('.s-orders-service-variant').each(function() {
+                var item = $(this);
+                var option = item.find('option:selected');
+                var li = item.parents('li:first');
+                updateServicePriceInput(option, li.find('.s-orders-service-price'), false);            
         });
 
         this.container.off('click', '.s-order-item-delete').on('click', '.s-order-item-delete', function() {
@@ -180,36 +264,55 @@ $.order_edit = {
             on('change', '.s-orders-services input', $.order_edit.updateTotal);
         this.container.
             off('change', '.s-orders-product-price input').
-            on('change', '.s-orders-product-price input', $.order_edit.updateTotal);
+            on('change', '.s-orders-product-price input', function() {
+                var price = $.order_edit.parseFloat($(this).val());
+                $.order_edit.container.find('.s-orders-service-price').each(function() {
+                    var item = $(this);
+                    if (item.data('currency') === '%' && item.attr('data-price') === item.val()) {
+                        var p = price * (item.data('percentPrice') / 100);
+                        item.val($.order_edit.formatFloat(p));
+                        item.attr('data-price', p);
+                    }
+                });
+                $.order_edit.updateTotal.apply(this);
+            });
         this.container.
             off('change', '.s-orders-services .s-orders-service-variant').
             on('change', '.s-orders-services .s-orders-service-variant',
                     $.order_edit.updateTotal
         );
 
+        $(".s-order-customer-details").on('change', 'select', function () {
+            if  ($(this).attr('name').indexOf('address')) {
+                $.order_edit.updateTotal();
+            }
+        });
+
         $("#shipping_methods").change(function() {
-            var rate = $(this).children(':selected').data('rate');
-            $("#shipping-rate").val(rate);
-            $.order_edit.updateTotal();
+            var o = $(this).children(':selected');
+            var rate = o.data('rate') || 0;
+            $("#shipping-rate").val($.order_edit.formatFloat(rate));
+            if (o.data('error')) {
+                $("#shipping-rate").addClass('error');
+                $("#shipping-info").html('<span class="error">' + o.data('error') + '</span>').show();
+            } else {
+                $("#shipping-rate").removeClass('error');
+                $("#shipping-info").empty().hide();
+            }
+            $.order_edit.updateTotal(false);
+        });
+
+        $("#payment_methods").change(function() {
+            var pid = $(this).val();
+            $("#payment-info > div").hide();
+            if ($('#payment-custom-' + pid).length) {
+                $('#payment-custom-' + pid).show();
+            }
         });
 
         $("#discount,#shipping-rate").change(function() {
-            $.order_edit.updateTotal();
+            $.order_edit.updateTotal(false);
         });
-
-        var validate = function(item) {
-            var max_value = parseInt(item.attr('data-max-value'), 10);
-            var val = parseInt(item.val(), 10);
-            if (isNaN(max_value)) {
-                return true;
-            } else {
-                if (isNaN(val)) {
-                    return false;
-                } else {
-                    return val <= max_value;
-                }
-            }
-        };
 
         this.container.off('keydown', '.s-orders-quantity').on('keydown', '.s-orders-quantity', function() {
             var self = $(this);
@@ -218,18 +321,21 @@ $.order_edit = {
                 clearTimeout(timer_id);
             }
             self.data('timer_id', setTimeout(function() {
-                if (!validate(self)) {
-                    self.addClass('error');
-                } else {
-                    $.order_edit.updateTotal();
-                    self.removeClass('error');
-                }
+                $.order_edit.updateTotal();
             }, 450));
         });
 
         if (this.form && this.form.length) {
             this.form.unbind('sumbit').bind('submit', function() {
                 $.order_edit.showValidateErrors();
+                
+                // submit optimization
+                // disable that services that aren't checked
+                $('.s-orders-services input[name^=service]:not(:checked)', this.form).each(function() {
+                    var item = $(this);
+                    item.closest('li').find(':input').attr('disabled', true);
+                });
+                
                 if (!$.order_edit.container.find('.error').length) {
                     if ($.order_edit.id) {
                         $.order_edit.editSubmit();
@@ -241,21 +347,16 @@ $.order_edit = {
             });
         }
     },
+    
 
-    updateTotal : function() {
+    updateTotal : function(ajax) {
+        var ajax = ajax === undefined ? true : ajax;
         var container = $.order_edit.container;
         if (!container.find('.s-order-item').length) {
             $("#subtotal").text(0);
             $("#total").text(0);
             return;
         }
-        var extParseFloat = function(str) {
-            if (!str) {
-                return 0;
-            } else {
-                return parseFloat(('' + str).replace(',', '.'));
-            }
-        };
         var subtotal = 0;
 
         // Data for orderTotal controller
@@ -269,62 +370,116 @@ $.order_edit = {
         container.find('.s-order-item').each(function() {
             var tr = $(this);
             var product_id = tr.find('input[name^="product"]').val();
-            var item_price = 0;
-            var price = extParseFloat(tr.find('.s-orders-product-price input').val());
-            var quantity = extParseFloat(tr.find('input.s-orders-quantity').val());
-
-            subtotal   += price * quantity;
-            item_price += price * quantity;
+            var services = [];
+            var price = $.order_edit.parseFloat(tr.find('.s-orders-product-price input').val());
+            var quantity = $.order_edit.parseFloat(tr.find('input.s-orders-quantity').val());
+            
+            subtotal += price * quantity;
 
             if (tr.find('.s-orders-services').length) {
                 tr.find('.s-orders-services input:checkbox:checked').each(function() {
                     var li = $(this).closest('li');
-                    price = extParseFloat(li.find('input.s-orders-service-price').val());
-
-                    subtotal   += price * quantity;
-                    item_price += price * quantity;
+                    var service_price = $.order_edit.parseFloat(li.find('input.s-orders-service-price').val());
+                    
+                    services.push({
+                        id: $(this).val(),
+                        price: service_price
+                    });
+                    
+                    subtotal   += service_price * quantity;
 
                 });
             }
+
+            // get SKU id
+            var sku_input = tr.find('input[name^=sku]:not(:radio)').add(tr.find('input[name^=sku]:checked')).first();
+            var sku_id = sku_input.val() || 0;
+            
             data.items.push({
                 product_id: product_id,
                 quantity: quantity,
-                price: item_price
+                price: price,
+                sku_id: sku_id,
+                services: services
             });
         });
+        data.subtotal = subtotal;
+        var discount = $.order_edit.parseFloat($("#discount").val() || 0);
+        data.discount = discount;
+        if ($.order_edit.id) {
+            data.order_id =  $.order_edit.id;
+        }
+        data['customer[id]'] = $('#s-customer-id').val();
 
-        // Fetch shipping options and rates, and other info from orderTotal controller
-        $.post('?module=order&action=total', data, function(response) {
-            if (response.status == 'ok') {
-                for (var ship_id in response.data.shipping_methods) {
-                    var ship =  response.data.shipping_methods[ship_id];
-                    var o = $("#shipping_methods").find('option[value="' + ship_id + '"]');
-                    if (o.attr('selected') && o.data('rate') == $("#shipping-rate").val()) {
-                        $("#shipping-rate").val(ship.rate);
+        if (ajax) {
+            // Fetch shipping options and rates, and other info from orderTotal controller
+            $.post('?module=order&action=total', data, function(response) {
+                if (response.status == 'ok') {
+                    var el = $("#shipping_methods");
+                    var el_selected = el.val();
+                    el.empty();
+                    
+                    var shipping_method_ids = response.data.shipping_method_ids;
+                    var shipping_methods = response.data.shipping_methods;
+                    
+                    // exact match
+                    var found = shipping_method_ids.indexOf(el_selected) !== -1;
+                    
+                    for (var i = 0; i < shipping_method_ids.length; i += 1) {
+                        var ship_id = shipping_method_ids[i];
+                        var ship =  shipping_methods[ship_id];
+                        var o = $('<option></option>');
+                        o.html(ship.name).attr('value', ship_id).data('rate', ship.rate);
+                        if (ship.error) {
+                            o.data('error', ship.error);
+                        }
+                        el.append(o);
+                        
+                        // unexact match, but close
+                        if (!found) {
+                            var ship_id_parts = ('' + ship_id).split('.');
+                            var el_selected_parts = el_selected.split('.');
+                            if (ship_id_parts[0] !== undefined && el_selected_parts[0] !== undefined && 
+                                    ship_id_parts[0] == el_selected_parts[0])
+                            {
+                                    found = true;
+                                    el_selected = ship_id;
+                            }
+                        }
                     }
-                    o.data('rate', ship.rate);
+                    if (found) {
+                        el.val(el_selected).change();
+                    }
+                    if (!$.order_edit.id) {
+                        $('#discount').val(response.data.discount).change();
+                    } else {
+                        if (!parseFloat($('#discount').val()) && response.data.discount) {
+                            $('#discount').val(response.data.discount).change();
+                        } else {
+                            $('#update-discount').data('value', response.data.discount).show();
+                        }
+                    }
                 }
-            }
-        }, 'json');
+            }, 'json');
+        }
 
-        $("#subtotal").text(Math.round(subtotal * 100) / 100);
-        var shipping = extParseFloat($("#shipping-rate").val().replace(',', '.')) || 0;
+        $("#subtotal").text($.order_edit.formatFloat(Math.round(subtotal * 100) / 100));
+        var shipping = $.order_edit.parseFloat($("#shipping-rate").val().replace(',', '.')) || 0;
         var undiscounted_total = subtotal + shipping;
-        var discount = extParseFloat($("#discount").val() || 0);
 
         // correct discout by constraint: total must be >= 0
-//        if (discount < 0) {
-//            discount = 0;
-//            $("#discount").val('');
-//        } else {
-//            if (undiscounted_total - discount < 0) {
-//                discount = undiscounted_total;
-//            }
-//            $("#discount").val(Math.round(discount * 100) / 100);
-//        }
+        if (discount < 0) {
+            discount = 0;
+            $("#discount").val('');
+        } else {
+            if (undiscounted_total - discount < 0) {
+                discount = undiscounted_total;
+            }
+            $("#discount").val($.order_edit.formatFloat(Math.round(discount * 100) / 100));
+        }
 
         var total = undiscounted_total - discount;
-        $("#total").text(Math.round(total * 100) / 100);
+        $("#total").text($.order_edit.formatFloat(Math.round(total * 100) / 100));
     },
 
     editSubmit : function() {
@@ -335,6 +490,7 @@ $.order_edit = {
             $.shop.trace('editSubmit', r);
             if (r && r.errors && !$.isEmptyObject(r.errors)) {
                 $.order_edit.showValidateErrors(r.errors);
+                $('.s-orders-services input:disabled', this.form).attr('disabled', false);
                 return false;
             }
         });
@@ -351,9 +507,25 @@ $.order_edit = {
             $.shop.trace('addSubmit', r);
             if (r && r.errors && !$.isEmptyObject(r.errors)) {
                 $.order_edit.showValidateErrors(r.errors);
+                $('.s-orders-services input:disabled', this.form).attr('disabled', false);
                 return false;
             }
         });
+    },
+    
+    formatFloat: function(float) {
+        if (this.float_delimeter === ',') {
+            return ('' + float).replace('.', ',');
+        }
+        return '' + float;
+    },
+            
+    parseFloat: function(str) {
+        if (!str) {
+            return 0;
+        } else {
+            return parseFloat(('' + str).replace(',', '.'));
+        }
     },
 
     slideBack : function() {
@@ -444,7 +616,7 @@ $.order_edit = {
     },
 
     showValidateErrors : function(validate_errors) {
-        $('#s-order-edit-customer .error').removeClass('error');
+        $('.error').removeClass('error');
         $('#s-order-edit-customer .errormsg').empty();
         if (validate_errors && validate_errors.customer) {
             var errors = validate_errors.customer;
@@ -461,6 +633,9 @@ $.order_edit = {
                 });
             }
         }
+        
+        var common_errors = [];
+        
         $('.s-order-errors').empty();
         if (validate_errors && validate_errors.order) {
             if (!$.isEmptyObject(validate_errors.order.items)) {
@@ -473,9 +648,28 @@ $.order_edit = {
                     delete validate_errors.order.items[index];
                 }
             }
-            if (validate_errors.order.common) {
-                $('.s-order-errors').html(validate_errors.order.common);
+
+
+            if (!$.isEmptyObject(validate_errors.order.product)) {
+                var p_errors = validate_errors.order.product;
+                for (var p_id in p_errors) {
+                    if (p_errors.hasOwnProperty(p_id)) {
+                        if ('quantity' in p_errors[p_id]) {
+                            var order_item = $('.s-order-item[data-product-id='+p_id+']');
+                            order_item.find('.s-orders-quantity').addClass('error');
+                            common_errors.push(p_errors[p_id]['quantity']);
+                        }
+                    }
+                }
             }
+            if (validate_errors.order.common) {
+                common_errors.push(validate_errors.order.common);
+            }
+            
+            if (common_errors.length) {
+                $('.s-order-errors').html(common_errors.join("<br>"));
+            }
+            
         }
     },
 
@@ -625,17 +819,11 @@ $.order_edit = {
         });
     },
 
-    getWarnClass : function(count) {
-        if (count !== null && count <= 0) {
-            return 's-stock-warning-none';
-        } else if (count == 1) {
-            return 's-stock-warning-low';
-        } else {
-            return '';
-        }
-    },
-
     inputName : function(name) {
         return '"customer[' + name + ']"';
+    },
+            
+    getPercentSymbol: function() {
+        return '%';
     }
 };

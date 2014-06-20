@@ -35,7 +35,7 @@ class waDbMySQLAdapter extends waDbAdapter
         }
         
         $charset = isset($settings['charset']) ? $settings['charset'] : 'utf8';
-        @mysql_query ("SET NAMES '" . $charset . "' COLLATE '".$charset."_bin'", $handler);
+        @mysql_set_charset ($charset, $handler);
         if (isset($settings['sql_mode'])) {
             $sql = "SET SESSION sql_mode = '".mysql_real_escape_string($settings['sql_mode'], $handler)."'";
             @mysql_query($sql, $handler);
@@ -53,6 +53,10 @@ class waDbMySQLAdapter extends waDbAdapter
         $r = mysql_query($query, $this->handler);
         // check error MySQL server has gone away
         if (!$r && mysql_errno($this->handler) == 2006 && mysql_ping($this->handler)) {
+            return mysql_query($query, $this->handler);
+        } elseif (!$r && mysql_errno($this->handler) == 1104) {
+            // try set sql_big_selects
+            mysql_query('SET SQL_BIG_SELECTS=1', $this->handler);
             return mysql_query($query, $this->handler);
         }
         return $r;
@@ -185,6 +189,11 @@ class waDbMySQLAdapter extends waDbAdapter
         foreach ($data as $field_id => $field) {
             if (substr($field_id, 0, 1) != ':') {
                 $type = $field['type'].(!empty($field['params']) ? '('.$field['params'].')' : '');
+                foreach (array('unsigned', 'zerofill') as $k) {
+                    if (!empty($field[$k])) {
+                        $type .= ' '.strtoupper($k);
+                    }
+                }
                 if (isset($field['null']) && !$field['null']) {
                     $type .= ' NOT NULL';
                 }
@@ -206,7 +215,14 @@ class waDbMySQLAdapter extends waDbAdapter
             if ($key_id == 'PRIMARY') {
                 $k = "PRIMARY KEY";
             } else {
-                $k = (!empty($key['unique']) ? "UNIQUE " : "")."KEY ".$this->escapeField($key_id);
+                $index_type = '';
+                foreach (array('unique', 'fulltext', 'spatial') as $tk) {
+                    if (!empty($key[$tk])) {
+                        $index_type = strtoupper($tk).' ';
+                        break;
+                    }
+                }
+                $k = $index_type."KEY ".$this->escapeField($key_id);
             }
             $key_fields = array();
             foreach ($key['fields'] as $f) {

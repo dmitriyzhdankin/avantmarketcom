@@ -1,4 +1,8 @@
 <?php
+/**
+ * Class shopMigratePluginBackendRunController
+ * @property shopMigrateTransport[string] $data['transport']
+ */
 class shopMigratePluginBackendRunController extends waLongActionController
 {
     /**
@@ -17,11 +21,11 @@ class shopMigratePluginBackendRunController extends waLongActionController
         try {
             $options = waRequest::post();
             $options['processId'] = $this->processId;
-            if ($trasnport = waRequest::post('transport')) {
+            if ($transport = waRequest::post('transport')) {
                 unset($options['transport']);
             }
-            $this->data['transport'] = shopMigrateTransport::getTransport($trasnport, $options);
-            $this->transport =& $this->data['transport'];
+            $this->data['transport'] = shopMigrateTransport::getTransport($transport, $options);
+            $this->transport = $this->data['transport'];
             $this->transport->init();
             $this->data['timestamp'] = time();
             $this->data['count'] = $this->transport->count();
@@ -34,7 +38,7 @@ class shopMigratePluginBackendRunController extends waLongActionController
             $this->data['memory'] = memory_get_peak_usage();
             $this->data['memory_avg'] = memory_get_usage();
         } catch (waException $ex) {
-            echo json_encode(array('error' => $ex->getMessage(), ));
+            echo json_encode(array('error' => $ex->getMessage(),));
             exit;
         }
     }
@@ -152,7 +156,7 @@ class shopMigratePluginBackendRunController extends waLongActionController
         $response['stage_count'] = $stage_count;
         $response['current_count'] = $this->data['current'];
         $response['processed_count'] = $this->data['processed_count'];
-        if ($this->getRequest()->post('cleanup')) {
+        if ($response['ready']) {
             $response['report'] = $this->report();
         }
         echo json_encode($response);
@@ -160,7 +164,7 @@ class shopMigratePluginBackendRunController extends waLongActionController
 
     protected function restore()
     {
-        $this->transport =& $this->data['transport'];
+        $this->transport = $this->data['transport'];
         $this->transport->restore();
     }
 }

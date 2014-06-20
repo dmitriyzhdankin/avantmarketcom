@@ -40,7 +40,7 @@
                                           
                     <td class="name">
                     <a href="{$wa->getUrl('/frontend/product', ['product_url' => $item.product.url])}" class="bold">{$item.product.name|escape}</a>
-                    <br/>{if $item.product.count lt 1}<span style="color:#F00;font-style:italic;">Товара нет в наличии на складе</span>{/if}
+                    <br/>{if $item.count === '0'}<span style="color:#F00;font-style:italic;">Наличие уточняйте у менеджера</span>{/if}
                     {*$item.product.count*}{*$item.product.count - $item.quantity*}
                     
                             {if !empty($item.services)}
@@ -65,11 +65,11 @@
                         {/if}
                         </td>
                         <td class="bg edit" style="padding:30px 10px 0px 10px;">{$item.sku_name}</td>
-		                <td class="price" style="padding-left:10px;width:90px;">{shop_currency($item.price)}</td>
-                        {if $wa->user()->getName()} <td class="bg price" style="padding-left:10px;width:80px;">{shop_currency($item.opt_price)}</td>{/if} 
+		        <td class="price" style="padding-left:10px;width:90px;">{shop_currency($item.price)}</td>
+                        <td class="bg price" style="padding-left:10px;width:80px;">{if $wa->user()->getName() && isset($item.opt_price) } {shop_currency($item.opt_price)}{else}{shop_currency($item.price)}{/if} </td>
                         <td class="qty" style="text-align:center;padding-left:0px;"><input type="text" name="quantity[{$item.id}]" value="{$item.quantity}" class="qty"></td>
                         <td class="bg price" style="text-align:center;padding-left:0px;">
-                         {if $wa->user()->getName() && $item.opt_price neq 0}                        
+                         {if $wa->user()->getName() && isset($item.opt_price) && $item.opt_price neq 0}                        
                          {shop_currency($item.opt_price * $item.quantity, $item.currency)}
                          <br/><s style="font-size:11px;">{shop_currency($item.price * $item.quantity, $item.currency)}</s>
                          {else}{shop_currency($item.price * $item.quantity, $item.currency)}{/if}

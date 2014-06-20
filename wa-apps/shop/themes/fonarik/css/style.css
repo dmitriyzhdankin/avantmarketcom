@@ -1,7 +1,54 @@
 /*********
  * Fonts *
  *********/
-
+@font-face {
+ font-family: Bitter;
+ src: url(../fonts/Bitter.eot)
+}
+@font-face {
+ font-family: Bitter;
+ src: url(../fonts/Bitter.ttf);
+}
+@font-face {
+ font-family: Bitter-Bold;
+ src: url(../fonts/Bitter-Bold.eot)
+}
+@font-face {
+ font-family: Bitter-Bold;
+ src: url(../fonts/Bitter-Bold.ttf);
+}
+@font-face {
+ font-family: Bitter-Italic;
+ src: url(../fonts/Bitter-Italic.eot)
+}
+@font-face {
+ font-family: Bitter-Italic;
+ src: url(../fonts/Bitter-Italic.ttf);
+}
+@font-face {
+ font-family: Segoeui;
+ src: url(../fonts/Segoeui.eot)
+}
+@font-face {
+ font-family: Segoeui;
+ src: url(../fonts/Segoeui.ttf);
+}
+@font-face {
+ font-family: Segoeui-Bold;
+ src: url(../fonts/Segoeui-Bold.eot)
+}
+@font-face {
+ font-family: Segoeui-Bold;
+ src: url(../fonts/Segoeui-Bold.ttf);
+}
+@font-face {
+ font-family: Segoeui-Italic;
+ src: url(../fonts/Segoeui-Italic.eot)
+}
+@font-face {
+ font-family: Segoeui-Italic;
+ src: url(../fonts/Segoeui-Italic.ttf);
+}
 
 *{padding:0;margin:0; border:0 none;}
 html, body, div, span, applet, object, iframe,
@@ -31,7 +78,7 @@ b,strong{font-family: Arial, Verdana, serif;}
 p, b, li, strong{font-size:13px; line-height: 20px;}
 hr{background: #e0e0e0;height: 1px}
 h1,h2,h3,h4,h5,h6 {
-	font-family:  Verdana, serif;
+	font-family: Myriad Pro, Verdana, serif;
 	font-weight: normal;
 	color: #444;
 	line-height: 1;
@@ -81,7 +128,7 @@ select,
 	position: relative;
 	height: 33px;
 	padding-left: 10px;
-	font:normal 12px/33px  Arial, Verdana, serif;
+	font:normal 12px/33px Segoeui, Arial, Verdana, serif;
 	color: #444;
 	text-decoration: none!important;
 	background: #fff;
@@ -113,7 +160,7 @@ select,
 .selectBox-dropdown-menu {
 	position: absolute;
 	list-style: none;
-	font:normal 12px/33px  Arial, Verdana, serif;
+	font:normal 12px/33px Segoeui, Arial, Verdana, serif;
 	color: #777;
 	background: #fff;
 	margin: 0;
@@ -145,7 +192,7 @@ input[type="submit"]{
 	background: #59b7c2;
 	color: #fefefe;
 	text-align: center;
-	font:normal 11px   Verdana, serif;
+	font:normal 11px Segoeui, Myriad Pro, Verdana, serif;
 	border-radius: 2px;
 	-moz-border-radius: 2px;
 	-khtml-border-radius: 2px;
@@ -209,7 +256,7 @@ blockquote{
 	border-left: 1px solid #e0e0e0;
 	padding: 0 0 0 25px;
 	color: #444;
-	font:italic 16px/25px   Verdana, serif;
+	font:italic 16px/25px Bitter-Italic, Myriad Pro, Verdana, serif;
 }
 /*** IMG ***/
 .alignleft,
@@ -236,7 +283,7 @@ blockquote{
 	padding: 8px 8px 4px;
 }
 .img_description{
-	font:italic 12px/17px   Verdana, serif;
+	font:italic 12px/17px Bitter-Italic, Myriad Pro, Verdana, serif;
 	color: #777;
 	width: 206px;
 	padding: 5px 10px;
@@ -250,7 +297,7 @@ blockquote{
 	text-align: center;
 	border-collapse: collapse;
 	border-top: 1px solid #e0e0e0;
-	font:normal 12px  Arial, Verdana, serif;
+	font:normal 12px Segoeui, Arial, Verdana, serif;
 }
 .tab_body td, .cart_product td, .list_body table td{
 	height: 49px;
@@ -263,12 +310,10 @@ blockquote{
 	height: 49px;
 	vertical-align: middle;
 	border-bottom: 1px solid #a8dade;
-	font:normal 13px   Verdana, serif;
+	font:normal 13px  Myriad Pro, Verdana, serif;
 }
 .tab_body td.bg,.tab_body th.bg, .cart_product td.bg, .cart_product th.bg, .list_body table th{background: #f7f7f7; text-align:left;padding-left:30px;}
 
-.tab_body.product_opt td.bg, .tab_body.product_opt td {padding:5px 10px;}
-.tab_body.product_opt th.bg, .tab_body.product_opt th{text-align:center;padding-left:0px;}
 /*************
  * Structure *
  *************/
@@ -276,7 +321,7 @@ body{
 	margin: 0 auto;
 	color:#444;
 	background: #fff;
-	font:normal 13px/20px  Arial, Verdana, serif;
+	font:normal 13px/20px Segoeui, Arial, Verdana, serif;
 	background: url(../images/bg_header.png) repeat-x center top;
 }
 .surely{
@@ -295,12 +340,12 @@ body{
 	padding: 0 0 0 24px;
 	margin: 9px 0 0 0;
 	background: url(../images/bg_phone_top.png) no-repeat left center;
-	font:normal 11px/36px  Arial, Verdana, serif;
+	font:normal 11px/36px Segoeui, Arial, Verdana, serif;
 }
 .welcome{
 	margin: 9px 0 0 0;
 	color: #777;
-	font:normal 12px/36px   Verdana, serif;
+	font:normal 12px/36px  Myriad Pro, Verdana, serif;
 }
 .welcome a{text-decoration: none}
 .welcome a:hover{text-decoration: underline}
@@ -327,20 +372,20 @@ body{
 	background: #59b7c2!important;
 	color: #fff;
 	text-decoration: none;
-	font:bold 11px/36px  Arial, Verdana, serif;
+	font:bold 11px/36px Segoeui-Bold, Arial, Verdana, serif;
 	float: left;
 }
 .lang{margin: 0 23px 0 0}
 .lang ul li a{
 	width: 36px;
-	font:normal 11px/36px  Arial, Verdana, serif;
+	font:normal 11px/36px Segoeui, Arial, Verdana, serif;
 }
 .lang ul li a:hover,
 .valuta ul li a:hover{
 	background:#d5e4f1;
 	text-decoration: none;
 }
-.valuta ul li.curent a{font:bold 13px/36px  Arial, Verdana, serif;}
+.valuta ul li.curent a{font:bold 13px/36px Bitter-Bold, Arial, Verdana, serif;}
 .valuta ul li a{font:normal 13px/36px  Arial, Verdana, serif;}
 
 /**********
@@ -356,7 +401,7 @@ header#branding{
 	padding: 0;
 }
 #site_description{
-	font:italic 11px/16px   Verdana, serif;
+	font:italic 11px/16px Bitter-Italic, Myriad Pro, Verdana, serif;
 	color: #aaa;
 }
 form.search{margin: 15px 0 0 0;float:left;height:33px;}
@@ -372,7 +417,7 @@ form.search .entry_form{
 	-moz-border-radius: 2px;
 	-khtml-border-radius: 2px;
 	behavior: url(PIE.htc);
-	font:normal 12px  Arial, Verdana, serif;
+	font:normal 12px Segoeui, Arial, Verdana, serif;
 }
 form.search input.entry_form:hover{
 	border: 1px solid #afafaf;
@@ -394,7 +439,6 @@ form.search input.entry_form:focus{
 #cart_nav a.cart_li{
 	float: right;
 	display: block;
-	
 	padding: 0 2px 0 27px;
 	margin: 16px 0 0 2px;
 	width: 155px;
@@ -402,20 +446,19 @@ form.search input.entry_form:focus{
 	color: #444;
 	text-align: center;
 	text-decoration: none;
-	font:normal 11px/35px  Arial, Verdana, serif;
+	font:normal 11px/35px Segoeui, Arial, Verdana, serif;
 	background: url(../images/bg_cart_nav.png) no-repeat 10px 50% #f1f3f5;
 	border-radius: 2px;
 	-moz-border-radius: 2px;
 	-khtml-border-radius: 2px;
 	behavior: url(PIE.htc);
 }
-#cart_nav a.cart_li,
-#cart_nav li a.cart_li{
+#cart_nav a:hover.cart_li,
+#cart_nav li:hover a.cart_li{
 	color: #fefefe;
 	text-align: center;
 	text-decoration: none;
 	background: url(../images/bg_cart_nav_h.png) no-repeat 10px 50% #59b7c2;
-	font-size:15px;
 }
 .cart_li + ul.cart_cont{
 	display: none;
@@ -434,7 +477,7 @@ form.search input.entry_form:focus{
 	behavior: url(PIE.htc);
 	z-index: 11;
 }
-.cart_li + ul.cart_cont p{font:normal 13px/24px   Verdana, serif;}
+.cart_li + ul.cart_cont p{font:normal 13px/24px  Myriad Pro, Verdana, serif;}
 li:hover .cart_li + ul.cart_cont{display: block;}
 .cart_li + ul.cart_cont li{
 	border-top: 0 none;
@@ -482,7 +525,7 @@ li:hover .cart_li + ul.cart_cont{display: block;}
 }
 .cart_cont .cont_cart h4{
 	color: #777;
-	font:normal 12px/17px  Arial, Verdana, serif;
+	font:normal 12px/17px Segoeui, Arial, Verdana, serif;
 	padding: 0;
 }
 .cart_cont .cont_cart .price{
@@ -507,7 +550,7 @@ li:hover .cart_li + ul.cart_cont{display: block;}
 	color: #fff;
 	text-align: center;
 	text-decoration: none;
-	font: normal 11px/34px   Verdana, serif;
+	font: normal 11px/34px Segoeui, Myriad Pro, Verdana, serif;
 	border-radius: 2px;
 	-moz-border-radius: 2px;
 	-khtml-border-radius: 2px;
@@ -531,7 +574,7 @@ li:hover .cart_li + ul.cart_cont{display: block;}
 nav.private{
 	float: right;
 	margin: 16px 0 0 0;
-	font:normal 12px  Arial, Verdana, serif;
+	font:normal 12px Segoeui, Arial, Verdana, serif;
 }
 nav.private ul{
 	list-style: none;
@@ -587,10 +630,7 @@ nav.private ul li a:hover{
 	padding: 0 16px;
 	color: #444;
 	text-transform: uppercase;
-	font-size:14px;
-	line-height:45px;
-	font-weight:normal;
-	font-family: 'Ubuntu Condensed', sans-serif;
+	font:normal 14px/50px  Myriad Pro, Verdana, serif;
 	border: 1px solid #f5f7f9;
 	background: #f5f7f9;
 }
@@ -628,7 +668,7 @@ nav.private ul li a:hover{
 	height: 39px;
 	color: #777;
 	text-transform: capitalize;
-	font:normal 13px/39px   Verdana, serif;
+	font:normal 13px/39px  Myriad Pro, Verdana, serif;
 	background: #fff;
 }
 .primary ul ul.sub li+li a{border-top: 1px solid #e0e0e0;}
@@ -654,8 +694,8 @@ nav.private ul li a:hover{
 .slid_text .slid_title span{
 	padding: 5px 10px;
 	font-size: 36px;
-	/*background: #fff;
-	opacity: 0.7;*/
+	background: #fff;
+	opacity: 0.7;
 	color: #222;
 }
 .slid_text p{
@@ -664,8 +704,8 @@ nav.private ul li a:hover{
 .slid_text p span{
 	padding: 5px 10px;
 	font-size: 16px;
-	/*background: #fff;
-	opacity: 0.7;*/
+	background: #fff;
+	opacity: 0.7;
 	color: #222;
 }
 .slidprev,
@@ -745,12 +785,12 @@ nav.private ul li a:hover{
 	clear: both;
 	float:left;
 	width:100%;
-	margin:10px 0px 10px 0px;
+	margin:-10px 0px 10px 0px;
 	height: 20px;
-	font:normal 18px/18px  Arial, Verdana, serif;
+	font:normal 18px/18px Segoeui, Arial, Verdana, serif;
 }
 .breadcrumbs a{
-	font:normal 11px/20px  Arial, Verdana, serif;
+	font:normal 11px/20px Segoeui, Arial, Verdana, serif;
 	color: #777;
 	text-decoration: none;
 	display: block;
@@ -767,7 +807,7 @@ nav.private ul li a:hover{
 	text-decoration: underline;
 }
 .breadcrumbs .current{
-	font:normal 11px/20px  Arial, Verdana, serif;
+	font:normal 11px/20px Segoeui, Arial, Verdana, serif;
 	color: #999;
 	margin: 0;
 }
@@ -788,14 +828,14 @@ aside h3{
 	padding: 0 0 17px 0;
 	border-bottom: 1px solid #e0e0e0;
 	color: #444;
-	font:normal 18px/18px   Verdana, serif;
+	font:normal 18px/18px  Myriad Pro, Verdana, serif;
 }
 aside h4{
 	margin: 10px 0 13px 0;
 	padding: 0 0 10px 0;
 	border-bottom: 1px solid #e0e0e0;
 	color: #444;
-	font:bold 13px/13px  Arial, Verdana, serif;
+	font:bold 13px/13px Segoeui, Arial, Verdana, serif;
 }
 /*** left_menu ***/
 .left_menu ul li{
@@ -813,7 +853,7 @@ aside h4{
 	color: #444;
 	height: 40px;
 	border: 0 none;
-	font:normal 13px/40px  Arial, Verdana, serif;
+	font:normal 13px/40px Segoeui, Arial, Verdana, serif;
 }
 .left_menu ul li:hover{
 	height: 39px;
@@ -844,7 +884,7 @@ aside h4{
 	color: #fff;
 	height: 38px;
 	text-decoration: none;
-	font:bold 13px/40px  Arial, Verdana, serif;
+	font:bold 13px/40px Segoeui, Arial, Verdana, serif;
 }
 
 .left_menu ul li.current:hover, , .left_menu ul li.selected:hover{
@@ -875,7 +915,7 @@ aside h4{
 #what_new a{
 	text-decoration: none;
 	color: #444;
-	font:normal 12px/18px  Arial, Verdana, serif;
+	font:normal 12px/18px Segoeui, Arial, Verdana, serif;
 }
 #what_new .prise{
 	padding: 2px 0 0 0;
@@ -889,12 +929,12 @@ aside h4{
 }
 .currently_shopping p{
 	color: #444;
-	font:normal 13px/13px  Arial, Verdana, serif;
+	font:normal 13px/13px Segoeui, Arial, Verdana, serif;
 	margin: 0 0 26px 0;
 }
 .currently_shopping li {
 	margin: 0px 0 8px 0;
-	font:bold 12px/11px  Arial, Verdana, serif;
+	font:bold 12px/11px Segoeui, Arial, Verdana, serif;
 	color: #59b7c2;
 }
 .currently_shopping ul{
@@ -917,7 +957,7 @@ aside h4{
 }
 .currently_shopping .clear_all {
 	float: right;
-	font:normal 12px/12px  Arial, Verdana, serif;
+	font:normal 12px/12px Segoeui, Arial, Verdana, serif;
 	color: #777;
 	text-decoration: none;
 }
@@ -925,7 +965,7 @@ aside h4{
 #shop_by form.check_opt{padding: 0 0 12px 0;}
 #shop_by form.check_opt p{
 	color: #777;
-	font:normal 12px  Arial, Verdana, serif;
+	font:normal 12px Segoeui, Arial, Verdana, serif;
 	margin: 0 0 6px 0;
 	min-height: 14px;
 }
@@ -951,12 +991,12 @@ aside h4{
 	max-height: 66px;
 }
 .specials li .cont{
-	font:normal 12px/18px  Arial, Verdana, serif;
+	font:normal 12px/18px Segoeui, Arial, Verdana, serif;
 	display: table-cell;
 	padding: 5px 10px 0px;
 }
 .specials li .cont a{
-	font:normal 12px/18px  Arial, Verdana, serif;
+	font:normal 12px/18px Segoeui, Arial, Verdana, serif;
 	color: #444;
 	text-decoration: none;
 }
@@ -974,7 +1014,7 @@ aside h4{
 input.vote{
 	margin: 16px 0 0 0;
 	width: 104px;
-	font:bold 14px/35px  Arial, Verdana, serif;
+	font:bold 14px/35px Segoeui-Bold, Arial, Verdana, serif;
 }
 #community_poll h4{border: 0 none;}
 #community_poll li{
@@ -1009,17 +1049,17 @@ input.vote{
 	float: left;
 	margin: 0px 22px 0 0;
 	width: 128px;
-	font: bold 14px/35px  Arial, Verdana, serif;
+	font: bold 14px/35px Segoeui-Bold, Arial, Verdana, serif;
 }
 #compare_products a.clear_all{
 	float: left;
-	font: normal 12px/35px  Arial, Verdana, serif;
+	font: normal 12px/35px Segoeui, Arial, Verdana, serif;
 	color: #777;
 	text-decoration: none;
 }
 /*** newsletter_signup ***/
 #newsletter_signup p{
-	font:normal 13px/20px  Arial, Verdana, serif;
+	font:normal 13px/20px Segoeui, Arial, Verdana, serif;
 }
 #newsletter_signup .newsletter{padding: 30px 0 0 0;}
 #newsletter_signup .newsletter .your_email{
@@ -1037,7 +1077,7 @@ input.vote{
 #newsletter_signup .newsletter #submit{
 	width: 135px;
 	height: 35px;
-	font:bold 14px/35px  Arial, Verdana, serif;
+	font:bold 14px/35px Segoeui-Bold, Arial, Verdana, serif;
 }
 /*** banners ***/
 #banners .arows{
@@ -1078,7 +1118,7 @@ input.vote{
 	color: #444;
 }
 #banners .banner p{
-	font:normal 20px  Arial, Verdana, serif;
+	font:normal 20px Segoeui, Arial, Verdana, serif;
 	margin: 0;
 	padding: 0;
 	color: #777;
@@ -1086,7 +1126,7 @@ input.vote{
 /*** tags ***/
 #tags a{
 	color: #777;
-	font:normal 13px/26px  Arial, Verdana, serif;
+	font:normal 13px/26px Segoeui, Arial, Verdana, serif;
 	text-decoration: none
 }
 #tags a:hover{
@@ -1237,7 +1277,7 @@ h1.post_title{
 }
 .sort a.sort_up{
 	color: #444!important;
-	font:bold 20px  Arial, Verdana, serif;
+	font:bold 20px Segoeui-Bold, Arial, Verdana, serif;
 	text-decoration: none!important;
 }
 .sort a:hover.sort_up{text-decoration: none;}
@@ -1297,7 +1337,7 @@ h1.post_title{
 	height: 14px;
 	margin: 0 0 20px 0;
 	color: #777;
-	font:normal 11px/16px  Arial, Verdana, serif;
+	font:normal 11px/16px Segoeui, Arial, Verdana, serif;
 }
 /* .review i.icon16{
 	display: block;
@@ -1325,7 +1365,7 @@ h1.post_title{
 .icon10.star-empty { background-image: url(../img/icons.png); background-position:-20px -16px; }
 .listing_product .product_li .entry_content p{
 	color: #444;
-	font:normal 12px/18px  Arial, Verdana, serif;
+	font:normal 12px/18px Segoeui, Arial, Verdana, serif;
 	margin: 0 0 13px 0;
 }
 a.more{text-decoration: none;}
@@ -1333,13 +1373,13 @@ a.more:hover{text-decoration: underline!important;}
 .listing_product .product_li .cart .price{
 	padding: 20px 0 0 0;
 	color: #2e8f9a;
-	font:normal 18px/18px   Verdana, serif;
+	font:normal 18px/18px  Myriad Pro, Verdana, serif;
 	margin: 0 0 20px 0;
 }
 .listing_product .product_li .cart .price .price_old{
 	padding: 5px 0 0 0;
 	color: #777;
-	font:normal 13px/13px  Arial, Verdana, serif;
+	font:normal 13px/13px Segoeui, Arial, Verdana, serif;
 	margin: 0;
 }
 .listing_product .product_li .cart a.bay{
@@ -1349,7 +1389,7 @@ a.more:hover{text-decoration: underline!important;}
 	color: #fefefe;
 	text-align: center;
 	text-decoration: none;
-	font:bold 13px/35px  Arial, Verdana, serif;
+	font:bold 13px/35px Segoeui-Bold, Arial, Verdana, serif;
 	margin: 0 0 28px 0;
 	background: #59b7c2;
 	border-radius: 2px;
@@ -1404,17 +1444,17 @@ margin:0px;
 	padding: 0 15px;
 	margin: 0 0 0 -3px;
 	color: #777;
-	font:normal 13px/39px  Arial, Verdana, serif;
+	font:normal 13px/39px Segoeui, Arial, Verdana, serif;
 	text-decoration: none;
 }
 .pagination li.prev a,
 .pagination li.next a{
-	font:normal 20px/32px  Arial, Verdana, serif;
+	font:normal 20px/32px Segoeui, Arial, Verdana, serif;
 	color: #444;
 }
 .pagination li.prev span,
 .pagination li.next span{
-	font:normal 20px/32px  Arial, Verdana, serif;
+	font:normal 20px/32px Segoeui, Arial, Verdana, serif;
 }
 .pagination li.next {border: 0 none;}
 .pagination li a:hover{
@@ -1465,7 +1505,7 @@ margin:0px;
 	margin: 0;
 	width: 294px;
 	height: 294px;
-	background: #f3f3f3;
+	background: #fff;
 	text-align: center;
 	display: table-cell;
 	vertical-align: middle;
@@ -1533,7 +1573,7 @@ margin:0px;
 	height: 29px;
 	margin: 0 0 15px 0;
 	color: #777;
-	font:normal 11px/29px  Arial, Verdana, serif;
+	font:normal 11px/29px Segoeui, Arial, Verdana, serif;
 }
 .product_page .entry_content .review a, i.icon10.star, i.icon16.star, i.icon10.star-empty, i.icon16.star-empty, i.icon10.star-half, i.icon16.star-half, i.icon10.star-hover, i.icon16.star-hover{
 	display: block;
@@ -1566,7 +1606,7 @@ background-position: 0 0;
 	text-align: center;
 	text-decoration: none;
 	color: #444;
-	font:normal 11px/29px  Arial, Verdana, serif;
+	font:normal 11px/29px Segoeui, Arial, Verdana, serif;
 	background: #f1f3f5;
 	border-radius: 2px;
 	-moz-border-radius: 2px;
@@ -1592,7 +1632,7 @@ background-position: 0 0;
 }
 .product_page .entry_content .ava_price .availability_sku{
 	float: left;
-	font:normal 12px/20px  Arial, Verdana, serif;
+	font:normal 12px/20px Segoeui, Arial, Verdana, serif;
 	color: #777;
 }
 .product_page .entry_content .ava_price .availability span{
@@ -1603,23 +1643,23 @@ background-position: 0 0;
 .product_page .entry_content .ava_price .sku span{color: #444;}
 .product_page .entry_content .ava_price .price{
 	float: right;
-	font:normal 18px/20px   Verdana, serif;
+	font:normal 18px/20px  Myriad Pro, Verdana, serif;
 	color: #2e8f9a;
 	text-align: right;
 }
 .product_page .entry_content .ava_price .price .price_old{
-	font:normal 13px/20px  Arial, Verdana, serif;
+	font:normal 13px/20px Segoeui, Arial, Verdana, serif;
 	color: #777;
 	text-decoration: line-through;
 }
 .product_page .entry_content .block_cart{
-	font:normal 13px/20px  Arial, Verdana, serif;
+	font:normal 13px/20px Segoeui, Arial, Verdana, serif;
 	color: #777;
 	margin: 25px 0 37px 0;
 }
 .product_page .entry_content .block_cart .obn_like{
 	float: left;
-	font:normal 12px/20px  Arial, Verdana, serif;
+	font:normal 12px/20px Segoeui, Arial, Verdana, serif;
 	color: #777;
 }
 .product_page .entry_content .block_cart .obn_like .obn a,
@@ -1643,7 +1683,7 @@ background-position: 0 0;
 .product_page .entry_content .block_cart .cart{
 	width: 250px;
 	float: right;
-	font:normal 12px/20px  Arial, Verdana, serif;
+	font:normal 12px/20px Segoeui, Arial, Verdana, serif;
 	color: #777;
 }
 .product_page .entry_content .block_cart .cart .number{
@@ -1667,7 +1707,7 @@ background-position: 0 0;
 	color: #fefefe;
 	text-align: center;
 	text-decoration: none;
-	font:bold 13px/35px  Arial, Verdana, serif;
+	font:bold 13px/35px Segoeui-Bold, Arial, Verdana, serif;
 	background: #59b7c2;
 	border-radius: 2px;
 	-moz-border-radius: 2px;
@@ -1708,7 +1748,7 @@ list-style:none;
 	padding: 0 20px;
 	height: 33px;
 	color: #777;
-	font:normal 13px/34px   Verdana, serif;
+	font:normal 13px/34px  Myriad Pro, Verdana, serif;
 	text-decoration: none;
 	border: 1px solid #f1f3f5;
 	background: #f1f3f5;
@@ -1728,7 +1768,7 @@ list-style:none;
 #wrapper_tab.tab5 a.tab5{
 	cursor: default;
 	color: #444;
-	font:normal 13px/34px   Verdana, serif;
+	font:normal 13px/34px  Myriad Pro, Verdana, serif;
 	text-decoration: none;
 	border: 1px solid #e0e0e0;
 	border-bottom: 1px solid #fff;
@@ -1765,11 +1805,11 @@ list-style:none;
 .comments li .autor{
 	float: left;
 	color: #444;
-	font:normal 14px/21px   Verdana, serif;
+	font:normal 14px/21px  Myriad Pro, Verdana, serif;
 }
 .comments li time{
 	color: #777;
-	font:normal 12px/20px  Arial, Verdana, serif;
+	font:normal 12px/20px Segoeui, Arial, Verdana, serif;
 }
 .evaluation{
 	clear: both;
@@ -1840,7 +1880,7 @@ list-style:none;
 .evaluation .price .eva_num{
 	position: absolute;
 	color: #999;
-	font:normal 11px/11px  Arial, Verdana, serif;
+	font:normal 11px/11px Segoeui, Arial, Verdana, serif;
 	margin: 21px 0 0 -11px;
 }
 .add_comments strong{
@@ -1870,7 +1910,7 @@ list-style:none;
 .add_comments input[type="submit"]{
 	margin: 30px 0 0 0;
 	width: 172px;
-	font:bold 14px/35px  Arial, Verdana, serif;
+	font:bold 14px/35px Segoeui-Bold, Arial, Verdana, serif;
 }
 /*** Related Products ***/
 .related .c_header {
@@ -1893,7 +1933,7 @@ list-style:none;
 .new_customers p{margin-bottom: 30px!important;}
 .new_customers button.account{
 	width: 192px;
-	font: bold 14px/35px   Verdana, serif;
+	font: bold 14px/35px Segoeui-Bold, Myriad Pro, Verdana, serif;
 }
 form.registed{
 	margin: 45px 0 0 0;
@@ -1906,7 +1946,7 @@ form.registed{
 }
 form.registed strong{
 	color: #707070;
-	font: bold 13px/13px   Verdana, serif;
+	font: bold 13px/13px Segoeui-Bold, Myriad Pro, Verdana, serif;
 }
 form.registed input[type="text"],
 form.registed input[type="email"]{
@@ -1925,19 +1965,19 @@ form.registed .remember .niceCheck{
 form.registed .remember span.rem{
 	font-size: 12px;
 	color: #777;
-	font:normal 12px/17px  Arial, Verdana, serif;
+	font:normal 12px/17px Segoeui, Arial, Verdana, serif;
 }
 form.registed .submit {
 	margin: 30px 0 0 0;
 	height: 35px;
 	color: #c3293a;
-	font:normal 12px/35px  Arial, Verdana, serif;
+	font:normal 12px/35px Segoeui, Arial, Verdana, serif;
 }
 form.registed .submit input[type="submit"]{
 	float: left;
 	margin:0 185px 0 0;
 	width: 108px;
-	font:bold 14px/35px  Arial, Verdana, serif;
+	font:bold 14px/35px Segoeui-Bold, Arial, Verdana, serif;
 }
 
 /*****************
@@ -2055,7 +2095,7 @@ table.cart_product td.cart_but button.update span{
 .bottom_block.estimate input[type="submit"]#get_estimate{
 	width: 150px;
 	margin: 5px 0 0 0;
-	font:bold 14px/35px  Arial, Verdana, serif;
+	font:bold 14px/35px Segoeui-Bold, Arial, Verdana, serif;
 }
 .bottom_block.discount,
 .bottom_block.total{
@@ -2069,7 +2109,7 @@ table.cart_product td.cart_but button.update span{
 .bottom_block.discount input[type="submit"]#apply_coupon{
 	width: 167px;
 	margin: 5px 0 0 0;
-	font:bold 14px/35px  Arial, Verdana, serif;
+	font:bold 14px/35px Segoeui-Bold, Arial, Verdana, serif;
 }
 .bottom_block.total{
 	text-align: right;
@@ -2080,7 +2120,7 @@ table.cart_product td.cart_but button.update span{
 	text-align: right;
 	border-collapse: collapse;
 	border: 0 none;
-	font: normal 13px/17px  Arial, Verdana, serif;
+	font: normal 13px/17px Segoeui, Arial, Verdana, serif;
 	color: #777;
 }
 .bottom_block.total table.subtotal td{
@@ -2090,7 +2130,7 @@ table.cart_product td.cart_but button.update span{
 	border-collapse: collapse;
 }
 .bottom_block.total table.subtotal .grand_total{
-	font:normal 18px/18px   Verdana, serif;
+	font:normal 18px/18px  Myriad Pro, Verdana, serif;
 	color: #444;
 }
 
@@ -2104,7 +2144,7 @@ table.cart_product td.cart_but button.update span{
 	float: right;
 	width: 255px;
 	height: 55px;
-	font:bold 14px/55px  Arial, Verdana, serif;
+	font:bold 14px/55px Segoeui-Bold, Arial, Verdana, serif;
 	background-image: url(../images/bg_chackout.png);
 	background-position: 225px 48%;
 	background-repeat: no-repeat;
@@ -2157,7 +2197,7 @@ form.contact textarea{
 form.contact input[type="submit"]{
 	width: 115px;
 	margin: 0px 0 0px 0;
-	font:bold 14px/35px  Arial, Verdana, serif;
+	font:bold 14px/35px Segoeui-Bold, Arial, Verdana, serif;
 }
 form.contact .field {
 	margin: 0px 0 0 0;
@@ -2165,7 +2205,7 @@ form.contact .field {
 	width: 140px;
 	float: right;
 	color: #C3293A;
-	font: normal 12px/35px  Arial, Verdana, serif;
+	font: normal 12px/35px Segoeui, Arial, Verdana, serif;
 }
 
 /********************
@@ -2185,7 +2225,7 @@ table.compare tr .desc{
 	padding: 15px 0 020px;
 	width: 160px;
 	color: #444!important;
-	font:bold 14px/14px   Verdana, serif!important;
+	font:bold 14px/14px Bitter-Bold, Myriad Pro, Verdana, serif!important;
 	text-align: left;
 	vertical-align: top;
 }
@@ -2222,11 +2262,11 @@ table.compare tr.images img{
 }
 table.compare tr.prise td{
 	color: #2e8f9a;
-	font:normal 18px/18px   Verdana, serif;
+	font:normal 18px/18px  Myriad Pro, Verdana, serif;
 }
 table.compare tr.prise td .price_old{
 	color: #777;
-	font:normal 14px/20px  Arial, Verdana, serif;
+	font:normal 14px/20px Segoeui, Arial, Verdana, serif;
 	text-decoration: line-through;
 }
 table.compare tr.availbility td{color: #277127;}
@@ -2253,7 +2293,7 @@ table.compare tr.description td{
 table.compare tr.add_cart td button.add{
 	margin: 0 auto;
 	width: 120px;
-	font:bold 12px/35px  Arial, Verdana, serif;
+	font:bold 12px/35px Segoeui-Bold, Arial, Verdana, serif;
 }
 table.compare tr.close_botttom td{
 	padding: 6px 0 49px;
@@ -2272,7 +2312,7 @@ table.compare tr.close_botttom a.close {
  ************/
 .left_404{text-align: center;}
 .left_404 h1.text_404{
-	font:bold 100px/70px   Verdana, serif;
+	font:bold 100px/70px Bitter-Bold, Myriad Pro, Verdana, serif;
 	color: #59b7c2;
 }
 .left_404 h6{color: #999;}
@@ -2292,7 +2332,7 @@ ul.checkout_list li .list_header{
 	padding: 0 20px;
 	margin: 0;
 	color: #999;
-	font:normal 18px/49px   Verdana, serif;
+	font:normal 18px/49px  Myriad Pro, Verdana, serif;
 	background: #f5f7f9;
 	border: 1px solid #e0e0e0;
 	border-radius: 2px;
@@ -2305,7 +2345,7 @@ ul.checkout_list li a.list_header{cursor: pointer;}
 ul.checkout_list li .list_header .number{
 	float: right;
 	color: #bec0c2;
-	font:bold 24px/45px   Verdana, serif;
+	font:bold 24px/45px Bitter-Bold, Myriad Pro, Verdana, serif;
 
 }
 ul.checkout_list li .list_body{display: none;}
@@ -2323,7 +2363,7 @@ ul.checkout_list li.active .list_body{
 	padding: 20px;
 	width:690px;
 	color: #999;
-	font:normal 18px/49px   Verdana, serif;
+	font:normal 18px/49px  Myriad Pro, Verdana, serif;
 	border: 1px solid #e0e0e0;
 	border-top:0 none;
 	border-radius: 0 0 2px 2px;
@@ -2342,30 +2382,28 @@ ul.checkout_list li.active .list_body form{
 	width: 100%;
 	float: left;
 	color: #444;
-	font:normal 12px/20px  Arial, Verdana, serif;
+	font:normal 12px/20px Segoeui, Arial, Verdana, serif;
 }
 ul.checkout_list li.active .list_body form div.wa-field, ul.checkout_list li.active .list_body form div.wa-field p span.field{
 	width: 334px;
 	float: left;
 	color: #444;
-	font:normal 12px/20px  Arial, Verdana, serif;
+	font:normal 12px/20px Segoeui, Arial, Verdana, serif;
 	margin:5px 10px 5px 0px;
 }
  ul.checkout_list li.active .list_body form div.wa-field p span.field span{
 	padding-right:10px; 
  }
  ul.checkout_list li.active .list_body form div.wa-field select{
-display:inline-block;
-width:340px;	
-margin-bottom:10px;
-font-size:14px;
+	width:270px; 	
+	padding-top:5px;
  }
  ul.checkout_list li.active .list_body form div.wa-field input{
 	width:314px; 
  }
 ul.checkout_list li.active .list_body form.login{float: right;}
 ul.checkout_list li.active .list_body form div.wa-name{
-	font:normal 16px/16px   Verdana, serif;
+	font:normal 16px/16px  Myriad Pro, Verdana, serif;
 	padding: 0 0 10px 0;
 	margin: 0 0 10px 0;
 	border-bottom: 1px solid #e0e0e0;
@@ -2381,11 +2419,11 @@ ul.checkout_list li.active .list_body form.checkout_or ul.radio li, ul.radio li{
 ul.checkout_list li.active .list_body form.checkout_or ul.radio .niceRadio, ul.radio .niceRadio{vertical-align: middle;}
 ul.checkout_list li.active .list_body form.checkout_or input[type="submit"]{
 	width:132px;
-	font:bold 14px/35px  Arial, Verdana, serif;
+	font:bold 14px/35px Segoeui-Bold, Arial, Verdana, serif;
 }
 form.registed strong{
 	color: #707070;
-	font: bold 13px/13px   Verdana, serif;
+	font: bold 13px/13px Segoeui-Bold, Myriad Pro, Verdana, serif;
 }
 ul.checkout_list li.active .list_body form.login input[type="text"],
 ul.checkout_list li.active .list_body form.login input[type="email"]{
@@ -2406,13 +2444,13 @@ ul.checkout_list li.active .list_body form.login .submit {
 	margin: 35px 0 0 0;
 	height: 35px;
 	color: #c3293a;
-	font:normal 12px/35px  Arial, Verdana, serif;
+	font:normal 12px/35px Segoeui, Arial, Verdana, serif;
 }
 ul.checkout_list li.active .list_body form.login .submit input[type="submit"]{
 	float: left;
 	margin:0 100px 0 0;
 	width: 108px;
-	font:bold 14px/35px  Arial, Verdana, serif;
+	font:bold 14px/35px Segoeui-Bold, Arial, Verdana, serif;
 }
 
 /*************
@@ -2427,7 +2465,7 @@ article.post h2.title_article{margin-top:23px;}
 article.post h2 a{
 	color: #444;
 	text-decoration: none;
-	font:normal 20px/20px  Verdana, serif;
+	font:normal 20px/20px Myriad Pro, Verdana, serif;
 }
 article.post .footer_article{
 	padding: 0px 0 0 0;
@@ -2441,7 +2479,7 @@ article.post .footer_article .number_c{
 	height: 25px;
 	text-align: center;
 	color: #777;
-	font:normal 13px/20px  Arial, Verdana, serif;
+	font:normal 13px/20px Segoeui, Arial, Verdana, serif;
 	background: url(../images/n_com.png) left top no-repeat;
 }
 article.view_post{border-bottom: 1px solid #e0e0e0;}
@@ -2499,7 +2537,7 @@ a:hover.button_block{
 /************
  * Carousel *
  ************/
-.carousel{margin: 0 0px 70px;min-height:413px;}
+.carousel{margin: 0 0px 70px;}
 .carousel .c_header{
 	height: 50px;
 	margin: 0 12px 42px;
@@ -2545,7 +2583,7 @@ a:hover.arows{
 }
 .list_product li{
 	position: relative;
-	height: 355px;
+	height: 320px;
 	float: left;
 }
 .product:hover{
@@ -2556,9 +2594,7 @@ a:hover.arows{
 }
 .product{
 	width: 226px!important;
-	height:340px;
-	position:relative;
-	margin-bottom:10px;
+	height: 316px;
 	overflow: hidden;
 	border: 1px solid #e0e0e0;
 	border-radius: 2px;
@@ -2593,29 +2629,20 @@ img.sale{
 	height: 210px;
 }
 .product h3.title{
-	height: 46px;
-	padding: 0px 8px 0;
+	height: 43px;
+	padding: 3px 8px 0;
 	margin: 0px;
-	font:normal 11px/13px   Verdana, serif;
+	font:normal 13px/18px  Myriad Pro, Verdana, serif;
 	color:#777;
 	border-bottom: 1px solid #e0e0e0;
 }
-
-.product .cart{
-	width:226px;
-	height:40px;
-	position:absolute;
-	bottom:0px;
-	left:0px;
-}
-
 .product .cart .price{
 	float: left;
 	height: 40px;
 	width: 123px;
 	padding: 1px 8px 0;
 	margin: 0px;
-	font:normal 18px   Verdana, serif;
+	font:normal 18px  Myriad Pro, Verdana, serif;
 	color:#2e8f9a;
 	border-right: 1px solid #e0e0e0;
 }
@@ -2629,7 +2656,7 @@ img.sale{
 }
 .product .cart .price .price_old{
 	color:#777;
-	font:normal 11px/18px  Arial, Verdana, serif;
+	font:normal 11px/18px Segoeui, Arial, Verdana, serif;
 	text-decoration: line-through;
 	margin: 0px 0 0 0;
 }
@@ -2682,43 +2709,28 @@ img.sale{
 	padding: 15px 20px 5px;
 	min-height: 195px;
 	line-height: 18px;
-	background: none;
-	-webkit-box-shadow: 1px 1px 4px rgba(0, 0, 0, 0.5);
-	-moz-box-shadow:    1px 1px 4px rgba(0, 0, 0, 0.5);
-	box-shadow:         1px 1px 4px rgba(0, 0, 0, 0.5);
-	-webkit-border-radius: 10px;
-	-moz-border-radius: 10px;
-	border-radius: 10px;
+	background: #f5f7f9;
 }
 .bottom_block h3{
 	margin: 0;
-	font: normal 28px/28px Verdana, serif;
+	font:normal 18px/18px  Myriad Pro, Verdana, serif;
 }
 .bottom_block p{
-	margin: 0 0 20px;
-	font: normal 14px/17px Arial, Verdana, serif;
+	margin:0 0 20px;
+	font:normal 11px/17px Segoeui, Arial, Verdana, serif;
 }
 .news ul{list-style: none;}
 .news ul li{
 	list-style: none;
-	margin: 0 10px 20px 10px;
-	font: normal 14px/17px Arial, Verdana, serif;
-	-webkit-border-radius: 10px;
-	-moz-border-radius: 10px;
-	border-radius: 10px;
-	padding: 10px;
-	-webkit-box-shadow: inset 1px 1px 2px rgba(0, 0, 0, 0.5);
-	-moz-box-shadow: inset 1px 1px 2px rgba(0, 0, 0, 0.5);
-	box-shadow: inset 1px 1px 4px rgba(0, 0, 0, 0.5);
-	background: #eee9e9;
+	margin: 0 0 20px 0;
+	font:normal 11px/17px Segoeui, Arial, Verdana, serif;
 }
 .news ul li a{text-decoration: none;}
 .news ul li a:hover{text-decoration: underline;}
 .news ul time{
 	clear: both;
 	display: block;
-	font: italic 12px/17px Segoeui-Italic, Arial, Verdana, serif;
-	text-decoration: underline;
+	font:italic 11px/17px Segoeui-Italic, Arial, Verdana, serif;
 }
 form.letter_form{
 	clear: both;
@@ -2764,7 +2776,7 @@ form.letter_form #submit:hover{
 	margin: 23px 0 0 0;
 	min-height: 45px;
 	background: url(../images/let_d.png) no-repeat left top;
-	font:italic 11px/17px   Verdana, serif;
+	font:italic 11px/17px Bitter-Italic, Myriad Pro, Verdana, serif;
 }
 
 /**********
@@ -2772,8 +2784,8 @@ form.letter_form #submit:hover{
  **********/
 footer{}
 .f_navigation{
-	height: auto;
-	padding: 20px;
+	height: 195px;
+	padding: 58px;
 	border-top: 1px solid #e0e0e0;
 	border-bottom: 1px solid #e0e0e0;
 	background: url(../images/bg_footer.png) repeat left top;
@@ -2781,7 +2793,7 @@ footer{}
 .f_navigation h3{
 	padding: 0 0 10px 0;
 	margin: 0 0 23px 0;
-	font:normal 18px/18px   Verdana, serif;
+	font:normal 18px/18px  Myriad Pro, Verdana, serif;
 	border-bottom: 1px solid #e0e0e0;
 }
 ul.f_contact li{
@@ -2790,34 +2802,34 @@ ul.f_contact li{
 	margin: 0 0 7px 0;
 	padding: 0 0 0 25px;
 	background: url(../images/li_phone.png) no-repeat 0px 50%;
-	font: 12px/22px  Arial, Verdana, serif;
+	font: 12px/22px Segoeui, Arial, Verdana, serif;
 }
 ul.f_contact li+li{background: url(../images/li_phone.png) no-repeat 0px 50%;}
 ul.f_contact li+li+li+li+li{background: url(../images/li_let.png) no-repeat 0px 50%;}
 .f_navigation nav.f_menu ul{list-style: none;}
 .f_navigation nav.f_menu ul a{
 	color: #777;
-	font: 12px/22px  Arial, Verdana, serif;
+	font: 12px/22px Segoeui, Arial, Verdana, serif;
 }
 .f_navigation nav.f_menu ul a:hover{
 	text-decoration: underline;
 	color: #444;
 }
 .f_info{
-	height: auto;
+	height: 70px;
 	background: #f9fbfc;
 }
 .f_info p.copyright{
 	color: #999;
-	font: 11px/70px  Arial, Verdana, serif;
+	font: 11px/70px Segoeui, Arial, Verdana, serif;
 }
-.soc{margin: 10px 0 10px 0;}
+.soc{margin: 23px 0 0 0;}
 .soc a{
 	display: block;
 	float: right;
 	width: 21px;
 	height: 21px;
-	margin: 0 0 10px 4px;
+	margin: 0 0 0 4px;
 	background-image: url(../images/bg_soc.png);
 	background-repeat: no-repeat;
 	background-position: 0 0;
@@ -2891,13 +2903,6 @@ div.wa-field input[type="text"], div.wa-field input[type="password"]{
 width:320px;	
 }
 
-div.wa-field select, div.wa-value select{
-display:inline-block;
-width:340px;	
-margin-bottom:10px;
-font-size:14px;
-}
-
 div.wa-field.wa-separator{
 display:none;	
 }
@@ -2908,23 +2913,7 @@ width:100%;
 margin-bottm:25px;
 }
 
-div.wa-value p label{
-float:left;
-width:100%;
-display:block;
-margin:5px 0px;	
-}
-
-div.wa-value p label input{
-width:20px !important;	
-}
-
 span.wa-required, span.wa-required span, span.wa-required em{
 float:left;
 width:100%;	
-}
-
-a.opt_table_link img{
-width:50px;
-height:50px;	
 }

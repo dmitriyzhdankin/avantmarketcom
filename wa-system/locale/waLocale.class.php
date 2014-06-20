@@ -27,10 +27,12 @@ class waLocale
 
     protected static $init = false;
 
+    protected static $strings = array();
+
     protected function __construct() {}
     protected function __clone() {}
 
-    public static function init()
+    public static function init($adapter = null)
     {
         if (!self::$init) {
             self::$init = true;
@@ -39,7 +41,7 @@ class waLocale
             if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN' || !function_exists('gettext')) {
                 self::$adapter = new waLocalePHPAdapter();
             } else {
-                self::$adapter = new waLocaleAdapter();
+                self::$adapter = $adapter ? $adapter :  new waLocaleAdapter();
             }
         }
     }
@@ -47,6 +49,16 @@ class waLocale
     public static function getLocale()
     {
         return self::$locale;
+    }
+
+    public static function setStrings(array $strings)
+    {
+        self::$strings = $strings;
+    }
+
+    public static function getString($id)
+    {
+        return ifset(self::$strings[$id]);
     }
 
     /**

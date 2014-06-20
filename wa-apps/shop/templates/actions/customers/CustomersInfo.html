@@ -72,19 +72,26 @@
     <br class="clear-left"><br>
 
     <h2>[`Orders`]</h2>
-    <table class="zebra double-padded">
+    <table class="zebra double-padded" id="s-order-list">
         {foreach $orders as $o}
             <tr>
                 <td class="nowrap">
-                    <a href="?action=orders#/orders/state_id={$o.state_id}&id={$o.id}/" style="{$o.style|escape}">
+                    <a href="?action=orders#/orders/state_id={$o.state_id}&id={$o.id}/" 
+                                      style="{$o.style|escape}"
+                                      data-order-id="{$o.id}"
+                                      data-state-id="{$o.state_id}"
+                                      class="s-order-link"
+                                >
                         <i class="{$o.icon}"></i>{$wa->shop->orderId($o.id)}
                     </a>
                 </td>
                 <td>{$o.create_datetime|wa_date:'humandate'}</td>
                 <td>
-                    {foreach $o.items as $i}
-                        {$i.name|escape} <span class="gray">x {$i.quantity}</span><br />
-                    {/foreach}
+                    {if isset($o.items)}
+                        {foreach $o.items as $i}
+                            {$i.name|escape} <span class="gray">x {$i.quantity}</span><br />
+                        {/foreach}
+                    {/if}
                 </td>
                 <td>
                     {* !!! TODO: shipping icon *}
@@ -175,7 +182,7 @@
                 <td class="gray">{$h.create_datetime|wa_date:'humandatetime'}</td>
                 <td>
                     {if $h.order_id}
-                        <a href="?action=orders#/orders/id=/{$h.order_id}">[`Order`] {$wa->shop->orderId($h.order_id)}</a>
+                        <a href="?action=orders#/orders/id={$h.order_id}/">[`Order`] {$wa->shop->orderId($h.order_id)}</a>
                     {/if}
                     {if $h.order_id && $h.comment}
                         <br>
@@ -238,7 +245,7 @@
         var add_payment_link = $('#add-payment');
         var amount_hint = wrapper.find('.amount-hint');
         
-        document.title = '{$contact.name|escape|cat:' — ':$wa->accountName()}';
+        document.title = '{$contact.name|cat:" — ":{$wa->accountName(false)}|escape:'javascript'}';
 
         // Changing the field makes hint with amount in default currency appear
         var h;
@@ -374,6 +381,26 @@
             'json');
         };
         
+    })();
+    
+    // controller for order list
+    (function() {
+        var view = $.storage.get('shop/orders/view') || '{$orders_default_view}';
+        var container = $('#s-order-list');
+        container.find('a.s-order-link').each(function() {
+            var link = $(this);
+            var href = '?action=orders#/orders/state_id=%state_id%&id=%id%/';
+            if (view == 'table') {
+                href = '?action=orders#/order/%id%/state_id=%state_id%/';
+            }
+            link.attr('href', 
+                href.replace(
+                    '%id%', link.attr('data-order-id')
+                ).replace(
+                    '%state_id%', link.attr('data-state-id')
+                )
+            );
+        });
     })();
     
 })();</script>

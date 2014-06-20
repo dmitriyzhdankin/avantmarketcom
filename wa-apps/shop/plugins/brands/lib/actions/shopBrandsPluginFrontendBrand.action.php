@@ -7,11 +7,14 @@ class shopBrandsPluginFrontendBrandAction extends shopFrontendAction
         $brand = waRequest::param('brand');
         $feature_model = new shopFeatureModel();
         $feature_id = wa()->getSetting('feature_id', '', array('shop', 'brands'));
-
         $feature = $feature_model->getById($feature_id);
-        
+
         $values_model = $feature_model->getValuesModel($feature['type']);
         $value_id = $values_model->getValueId($feature_id, $brand);
+
+        if (!$value_id) {
+            throw new waException('Brand not found', 404);
+        }
 
         $c = new shopProductsCollection();
         $c->filters(array($feature['code'] => $value_id));

@@ -7,11 +7,69 @@ class shopFrontendCategoryAction extends shopFrontendAction
         $category_model = new shopCategoryModel();
         if (waRequest::param('category_id')) {
             $category = $category_model->getById(waRequest::param('category_id'));
+            
         } else {
-            $category = $category_model->getByField(waRequest::param('url_type') == 1 ? 'url' : 'full_url', waRequest::param('category_url'));
+            //$category = $category_model->getByField(waRequest::param('url_type') == 1 ? 'url' : 'full_url', waRequest::param('category_url'));
+            $category_url_arr=explode("/",waRequest::param('category_url'));
+            $cat_url="";
+            foreach($category_url_arr AS $arr)
+            {
+                if((substr_count($arr,"ff-")==0) AND (substr_count($arr,"price_min-")==0) AND (substr_count($arr,"price_max-")==0))
+                {
+                    $cat_url .= $arr."/";
+                }elseif(substr_count($arr,"ff-")!=0)
+                {
+                    $f_url=$arr;
+                    $f_url=str_replace("ff-","",$f_url);
+                    
+                    
+                    $fexpl=explode("-",$f_url);
+                    
+                    
+                    foreach($fexpl AS $expl_arr)
+                    {                    
+                        $f_url_arr=explode("_",$expl_arr);
+                        $k[]=$f_url_arr[1];
+                        $_GET[$f_url_arr[0]]=$k;    
+                    }
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                }elseif(substr_count($arr,"price_min-")!=0)
+                {
+                    $f_url=$arr;
+                    $f_url=str_replace("price_min-","",$f_url);                                        
+                    $_GET["price_min"]=$f_url;
+                }elseif(substr_count($arr,"price_max-")!=0)
+                {
+                    $f_url=$arr;
+                    $f_url=str_replace("price_max-","",$f_url);                                        
+                    $_GET["price_max"]=$f_url;
+                }
+                
+                
+                
+                
+            }
+            $cat_url = str_replace("///","",$cat_url."//");
+            
+            //$category = $category_model->getByField(waRequest::param('url_type') == 1 ? 'url' : 'full_url', waRequest::param('category_url'));
+              $category = $category_model->getByField(waRequest::param('url_type') == 1 ? 'url' : 'full_url', $cat_url);
+              $this->view->assign('cat_url', $cat_url);
+           // echo "=".$cat_url."=<br>";
+            //echo "=".waRequest::param('category_url')."=<br>";
+            
+            //$k[]=129;
+            //$_GET['Tip']=$k;
+        //    echo serialize($_GET);
+            //echo waRequest::param('category_url')."===";
         }
         $route = wa()->getRouting()->getDomain(null, true).'/'.wa()->getRouting()->getRoute('url');
-        if (!$category || ($category['route'] && $category['route'] != $route)) {
+        if (!$category || ( isset($category['route']) && $category['route'] && $category['route'] != $route)) {
             throw new waException('Category not found', 404);
         }
 

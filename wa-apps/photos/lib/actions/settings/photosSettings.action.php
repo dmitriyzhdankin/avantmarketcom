@@ -4,7 +4,7 @@ class photosSettingsAction extends waViewAction
 {
     public function execute()
     {
-        $settings = $this->getConfig()->getOption();
+        $settings = $this->getConfig()->getOption(null);
         if (waRequest::getMethod() == 'post') {
             $this->save($settings);
             $this->view->assign('saved', 1);
@@ -13,7 +13,9 @@ class photosSettingsAction extends waViewAction
             'system' => $this->formatSizes($this->getConfig()->getSizes('system')),
             'custom' => $this->formatSizes($settings['sizes'])
         );
-        $this->view->assign('settings', $settings);
+        $this->view->assign('settings', $settings);        
+        $this->view->assign('sidebar_width', $this->getConfig()->getSidebarWidth());
+        
     }
 
     protected function formatSizes($sizes)
@@ -108,6 +110,24 @@ class photosSettingsAction extends waViewAction
         }
         $settings['sizes'] = array_values($settings['sizes']);
         $config_file = $this->getConfig()->getConfigPath('config.php');
+
+        $settings['enable_2x'] = waRequest::post('enable_2x') ? 1 : 0;
+        foreach (array('save_quality', 'save_quality_2x') as $k) {
+            $settings[$k] = waRequest::post($k, '', waRequest::TYPE_STRING_TRIM);
+
+            if ($settings[$k] == '') {
+                $settings[$k] = ($k == 'save_quality_2x') ? 70 : 90;
+            } else {
+                $settings[$k] = (float) $settings[$k];
+                if ($settings[$k] < 0) {
+                    $settings[$k] = 0;
+                }
+                if ($settings[$k] > 100) {
+                    $settings[$k] = 100;
+                }
+                $settings[$k] = str_replace(',', '.', $settings[$k]);
+            }
+        }
         waUtils::varExportToFile($settings, $config_file);
     }
 

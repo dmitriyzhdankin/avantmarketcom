@@ -52,8 +52,10 @@ class waContactEmailsModel extends waModel
 
     public function getContactIdByEmail($email)
     {
-        $sql = "SELECT contact_id FROM ".$this->table." WHERE email = s:email ORDER BY sort LIMIT 1";
-        return $this->query($sql, array('email' => $email))->fetchField();
+        $sql = "SELECT contact_id FROM ".$this->table."
+                WHERE email LIKE ('".$this->escape($email, 'like')."')
+                ORDER BY sort LIMIT 1";
+        return $this->query($sql)->fetchField();
     }
 
     public function getContactIdsByEmails($emails)
@@ -71,6 +73,14 @@ class waContactEmailsModel extends waModel
                 JOIN wa_contact c ON e.contact_id = c.id
                 WHERE e.email = s:email AND e.sort = 0 AND c.name = s:name";
         return  $this->query($sql, array('email' => $email, 'name' => $name))->fetchField();
+    }
+
+    public function getContactWithPassword($email)
+    {
+        $sql = "SELECT c.id FROM ".$this->table." e JOIN wa_contact c ON e.contact_id = c.id
+                WHERE e.email LIKE '".$this->escape($email, 'like')."' AND e.sort = 0 AND c.password != ''
+                LIMIT 1";
+        return $this->query($sql)->fetchField();
     }
 }
 

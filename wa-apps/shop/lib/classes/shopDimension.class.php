@@ -7,12 +7,14 @@ class shopDimension
      */
     private static $instance;
     private $units = array();
+
     private function __construct()
     {
         $config = wa('shop')->getConfig();
         $files = array(
-            $config->getPath('config').'/apps/'.$config->getApplication().'/dimension.php',
-            $config->getAppPath().'/lib/config/data/dimension.php',
+            $config->getConfigPath('dimension.php'),
+            $config->getConfigPath('data/dimension.php', false),
+
         );
         foreach ($files as $file_path) {
             if (file_exists($file_path)) {
@@ -25,6 +27,7 @@ class shopDimension
         }
         waHtmlControl::registerControl(__CLASS__, array(__CLASS__, 'getControl'));
     }
+
     private function __clone()
     {
         ;
@@ -114,6 +117,39 @@ class shopDimension
 
     }
 
+    /**
+     * @param $type
+     * @return array
+     */
+    public static function getBaseUnit($type)
+    {
+        $instance = self::getInstance();
+        if ($type && ($d = $instance->getDimension($type))) {
+            $units = self::getUnits($type);
+            if (isset($units[$d['base_unit']])) {
+                return $units[$d['base_unit']];
+            }
+        }
+        return array();
+    }
+
+    /**
+     * @param $type
+     * @param $unit
+     * @return array
+     */
+    public static function getUnit($type, $unit)
+    {
+        $instance = self::getInstance();
+        if ($type && ($d = $instance->getDimension($type))) {
+            $units = self::getUnits($type);
+            if (isset($units[$unit])) {
+                return $units[$unit];
+            }
+        }
+        return array();
+    }
+
     public static function getUnits($type)
     {
         $units = array();
@@ -121,9 +157,9 @@ class shopDimension
         if ($type && ($d = $instance->getDimension($type))) {
             if (isset($d['units'])) {
                 foreach ($d['units'] as $code => $unit) {
-                    $units[] = array(
+                    $units[$code] = array(
                         'value'       => $code,
-                        'title'       => _w($unit['name']),
+                        'title'       => $unit['name'],
                         'description' => isset($d['class']) ? $d['class'] : null,
                     );
                 }
@@ -132,6 +168,36 @@ class shopDimension
         return $units;
     }
 
+    public static function castUnit($type, $unit)
+    {
+        $units = self::getUnits($type);
+
+        if (!isset($units[$unit])) {
+            foreach ($units as $u) {
+                if (strcasecmp($u['value'], $unit) === 0) {
+                    $unit = $u['value'];
+                    break;
+                }
+                if (strcasecmp($u['title'], $unit) === 0) {
+                    $unit = $u['value'];
+                    break;
+                }
+            }
+        }
+        return $unit;
+    }
+
+    /**
+     *
+     * Convert dimension values
+     *
+     * @param double $value
+     * @param string $type dimension type
+     * @param string $unit target dimension unit, default is base_unit
+     * @param string $value_unit value dimension unit, default is base_unit
+     *
+     * @return double
+     */
     public function convert($value, $type, $unit, $value_unit = null)
     {
         if ($dimension = $this->getDimension($type)) {
@@ -141,7 +207,7 @@ class shopDimension
                 }
             }
 
-            if (($unit !== null) && ($unit != $dimension['unit'])) {
+            if (($unit !== null) && ($unit != $dimension['base_unit'])) {
                 if (isset($dimension['units'][$unit])) {
                     $value = $value / $dimension['units'][$unit]['multiplier'];
                 }

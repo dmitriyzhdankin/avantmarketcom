@@ -1,4 +1,4 @@
-<div class="sidebar left200px" id="p-sidebar">
+<div class="sidebar left{$sidebar_width}px" id="p-sidebar">
 
   <div class="block">
     <ul class="menu-v with-icons">
@@ -20,9 +20,17 @@
         </a>
       </li>
       {* @event backend_sidebar.%plugin_id%.menu *}
-      {foreach $backend_sidebar as $plugin_id => $item}{if !empty($item.menu)}
-        <li id="sidebar-{$plugin_id}">{$item.menu}</li>
-      {/if}{/foreach}
+      {foreach $backend_sidebar as $plugin_id => $item}
+        {if !empty($item.menu)}
+            {if is_array($item.menu)}
+                {foreach $item.menu as $i => $item_menu}
+                    <li id="sidebar-{$plugin_id}-{$i}">{$item_menu}</li>
+                {/foreach}
+            {else}
+                <li id="sidebar-{$plugin_id}">{$item.menu}</li>
+            {/if}
+        {/if}
+      {/foreach}
     </ul>
   </div>
 
@@ -38,6 +46,9 @@
     </h5>
     <div class="hierarchical" id="album-list">
       {$albums}
+      <div class="block p-empty-album-list" {if $albums}style="display: none;"{/if}>
+        <p class="hint align-center">[`Create an album using the green icon above.`]</p>
+      </div>
     </div>
   </div>
   <div class="block" {if !isset($cloud) || empty($cloud)}style="display:none;"{/if} id="tag-cloud-block">
@@ -52,28 +63,42 @@
     <div class="block" id="sidebar-section-{$plugin_id}">{$item.section}</div>
   {/if}{/foreach}
 
-  <div class="hr"></div>
+  {if $wa->user()->getRights($wa->app(), 'pages') || 
+    $wa->user()->getRights($wa->app(), 'design') ||
+    $wa->user()->isAdmin('photos')}
+    <div class="hr"></div>
 
-  <!-- not-that-frequently-accessed app sections -->
-  <div class="block">
-    <ul class="menu-v with-icons">
-      {if $wa->user()->getRights($wa->app(), 'pages')}
-      <li id="sidebar-pages"><a href="#/pages/"><i class="icon16 notebook"></i>[s`Pages`]</a></li>
-      {/if}
-      {if $wa->user()->getRights($wa->app(), 'design')}
-      <li id="sidebar-design"><a href="#/design/"><i class="icon16 design"></i>[s`Design`]</a></li>
-      {/if}
-      <li id="sidebar-plugins"><a href="#/plugins/"><i class="icon16 plugins"></i>[`Plugins`]</a></li>
-      <li id="sidebar-settings"><a href="#/settings/"><i class="icon16 settings"></i>[`Settings`]</a></li>
-    </ul>
+    <!-- not-that-frequently-accessed app sections -->
+    <div class="block">
+      <ul class="menu-v with-icons">
+        {if $wa->user()->getRights($wa->app(), 'pages')}
+        <li id="sidebar-pages"><a href="#/pages/"><i class="icon16 notebook"></i>[s`Pages`]</a></li>
+        {/if}
+        {if $wa->user()->getRights($wa->app(), 'design')}
+        <li id="sidebar-design"><a href="#/design/"><i class="icon16 design"></i>[s`Design`]</a></li>
+        {/if}
+        {if $wa->user()->isAdmin('photos')}
+          <li id="sidebar-plugins"><a href="#/plugins/"><i class="icon16 plugins"></i>[`Plugins`]</a></li>
+          <li id="sidebar-settings"><a href="#/settings/"><i class="icon16 settings"></i>[`Settings`]</a></li>
+        {/if}
+      </ul>
+    </div>
+  {/if}
+      
+  <br><br><br>
+  
+  <!-- sidebar width control -->    
+  <div id="p-sidebar-width-control" class="block p-sidebar-width-control">
+    <a href="#" class="arrow left">&larr;</a>
+    <a href="#" class="arrow right">&rarr;</a>
   </div>
-
+      
 </div>
 {capture name="template-album-list-item"}{literal}
-  <li class="drag-newposition ui-droppable"></li>
+  <li class="drag-newposition new-item"></li>
   <li class="dr {%#o.type == Album.TYPE_STATIC ? 'static' : 'dynamic'%}" rel="{%#o.id%}">
     <span class="count"></span>
-    <a href="#/album/{%#o.id%}" class="ui-droppable"><i class="icon16 {%#o.type == Album.TYPE_STATIC ? 'pictures' : 'funnel' %}"></i>{%#o.name%}
+    <a href="#/album/{%#o.id%}" class="new-item"><i class="icon16 {%#o.type == Album.TYPE_STATIC ? 'pictures' : 'funnel' %}"></i>{%#o.name%}
          {% if (o.status <= 0) { %}<i class="icon10 lock-bw no-overhanging"></i>{% } %}
          <strong class="small highlighted count-new"></strong>
     </a>
@@ -98,5 +123,7 @@
     $('#tag-cloud').html(tmpl('template-tag-cloud', {
         cloud: {json_encode($cloud)}
     }));
-    $.photos_sidebar.init();
+    $.photos_sidebar.init({
+        width: {$sidebar_width}
+    });
 </script>

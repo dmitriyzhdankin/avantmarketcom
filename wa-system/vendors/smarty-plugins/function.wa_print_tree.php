@@ -31,15 +31,20 @@ function smarty_function_wa_print_tree($params, &$smarty)
         unset($params['unfolded']);
     }
 
-
-    $html = '<ul class="menu-v'.(isset($params['class']) ? ' '.$params['class'] : '').'"'.(isset($params['attrs']) ? ' '.$params['attrs'] : '').'>';
+    $html = '<ul'. (isset($params['class']) ? ' class="'.$params['class'].'"' : '').(isset($params['attrs']) ? ' '.$params['attrs'] : '').'>';
     if (isset($params['attrs'])) {
         unset($params['attrs']);
     }
     if (isset($params['class'])) {
-        unset($params['class']);
+        if (strpos($params['class'], 'menu-v') !== false) {
+            $params['class'] = 'menu-v';
+        } elseif (strpos($params['class'], 'menu-h') !== false) {
+            $params['class'] = 'menu-v';
+        } else {
+            unset($params['class']);
+        }
     }
-    preg_match_all('/:([a-z_]+)/', $params['elem'], $match);
+    preg_match_all('/:([a-z_]+(?:\.[a-z]+)?)/', $params['elem'], $match);
 
     foreach ($data as $row) {
         $li_classes = array();
@@ -52,8 +57,11 @@ function smarty_function_wa_print_tree($params, &$smarty)
         $html .= '<li'.($li_classes ? ' class="'.implode(' ', $li_classes).'"' : '').'>';
         $elem = $params['elem'];
         foreach ($match[1] as $k) {
-            if (isset($row[$k])) {
-                $elem = str_replace(':'.$k, $row[$k], $elem);
+            if (strpos($k, '.')) {
+                $kp = explode('.', $k);
+                $elem = str_replace(':'.$k, isset($row[$kp[0]][$kp[1]]) ? $row[$kp[0]][$kp[1]] : '', $elem);
+            } else {
+                $elem = str_replace(':'.$k, isset($row[$k]) ? $row[$k] : '', $elem);
             }
         }
         $html .= $elem;

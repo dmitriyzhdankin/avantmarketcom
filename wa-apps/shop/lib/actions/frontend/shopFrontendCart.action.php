@@ -1,13 +1,11 @@
 <?php
 
-class shopFrontendCartAction extends waViewAction
+class shopFrontendCartAction extends shopFrontendAction
 {
     public function execute()
     {
-        if (!waRequest::isXMLHttpRequest()) {
-            $this->setLayout(new shopFrontendLayout());
-        }
-
+        $this->getResponse()->addHeader("Cache-Control", "no-store, no-cache, must-revalidate");
+        $this->getResponse()->addHeader("Expires", date("r"));
 
         if (waRequest::method() == 'post') {
             $data = wa()->getStorage()->get('shop/checkout', array());
@@ -32,8 +30,34 @@ class shopFrontendCartAction extends waViewAction
             }
         }
 
+        $cart_model = new shopCartItemsModel();
+
+        $cart = new shopCart();
+        $code = $cart->getCode();
+
+        $errors = array();
         if (waRequest::post('checkout')) {
-            $this->redirect(wa()->getRouteUrl('/frontend/checkout'));
+            $saved_quantity = $cart_model->select('id,quantity')->where("type='product' AND code = s:code", array('code' => $code))->fetchAll('id');
+            $quantity = waRequest::post('quantity');
+            foreach ($quantity as $id => $q) {
+                if ($q != $saved_quantity[$id]) {
+                    $cart->setQuantity($id, $q);
+                }
+            }
+            $not_available_items = $cart_model->getNotAvailableProducts($code, !wa()->getSetting('ignore_stock_count'));
+            foreach ($not_available_items as $row) {
+                if ($row['sku_name']) {
+                    $row['name'] .= ' ('.$row['sku_name'].')';
+                }
+                if ($row['available']) {
+                    $errors[$row['id']] = sprintf(_w('Only %d pcs of %s are available, and you already have all of them in your shopping cart.'), $row['count'], $row['name']);
+                } else {
+                    $errors[$row['id']] = _w('Oops! %s is not available for purchase at the moment. Please remove this product from your shopping cart to proceed.');
+                }
+            }
+            if (!$errors) {
+                $this->redirect(wa()->getRouteUrl('/frontend/checkout'));
+            }
         }
 
         $this->setThemeTemplate('cart.html');
@@ -63,7 +87,9 @@ class shopFrontendCartAction extends waViewAction
 
         $sku_model = new shopProductSkusModel();
         $skus = $sku_model->getByField('id', $sku_ids, 'id');
-		$user = wa()->getUser();
+        $user = wa()->getUser();
+
+        $image_model = new shopProductImagesModel();
 
         $delete_items = array();
         foreach ($items as $item_id => &$item) {
@@ -75,11 +101,25 @@ class shopFrontendCartAction extends waViewAction
             if ($item['type'] == 'product') {
                 $item['product'] = $products[$item['product_id']];
                 $sku = $skus[$item['sku_id']];
+                if ($sku['image_id'] && $sku['image_id'] != $item['product']['image_id']) {
+                    $img = $image_model->getById($sku['image_id']);
+                    if ($img) {
+                        $item['product']['image_id'] = $sku['image_id'];
+                        $item['product']['ext'] = $img['ext'];
+                    }
+                }
                 $item['sku_name'] = $sku['sku'];
+                $item['count'] = $sku['count'];
                 if($user['id'] && round($sku['purchase_price']) > 0 ) {$item['opt_price'] = $sku['purchase_price']; }
-				$item['price'] = $sku['price'];
+                $item['price'] = $sku['price'];
                 $item['currency'] = $item['product']['currency'];
                 $type_ids[] = $item['product']['type_id'];
+                if (isset($errors[$item_id])) {
+                    $item['error'] = $errors[$item_id];
+                    if (strpos($item['error'], '%s') !== false) {
+                        $item['error'] = sprintf($item['error'], $item['product']['name'].($item['sku_name'] ? ' ('.$item['sku_name'].')' : ''));
+                    }
+                }
             }
         }
         unset($item);
@@ -189,13 +229,25 @@ class shopFrontendCartAction extends waViewAction
                 foreach ($item_services as $s_id => &$s) {
                     if (!$s['variants']) {
                         unset($item_services[$s_id]);
-                    } elseif (count($s['variants']) == 1) {
+                        continue;
+                    }
+
+                    if ($s['currency'] == '%') {
+                        foreach ($s['variants'] as $v_id => $v) {
+                            $s['variants'][$v_id]['price'] = $v['price'] *  $item['price'] / 100;
+                        }
+                        $s['currency'] = $item['currency'];
+                    }
+
+                    if (count($s['variants']) == 1) {
                         $v = reset($s['variants']);
                         $s['price'] = $v['price'];
                         unset($s['variants']);
                     }
                 }
                 unset($s);
+                uasort($item_services, array('shopServiceModel', 'sortServices'));
+
                 $items[$item_id]['services'] = $item_services;
             } else {
                 $items[$item['parent_id']]['services'][$item['service_id']]['id'] = $item['id'];
@@ -208,7 +260,7 @@ class shopFrontendCartAction extends waViewAction
 
 
         foreach ($items as $item_id => $item) {
-            
+            $price = shop_currency($item['price'] * $item['quantity'], $item['currency'], null, false);
             if (isset($item['services'])) {
                 foreach ($item['services'] as $s) {
                     if (!empty($s['id'])) {
@@ -221,13 +273,14 @@ class shopFrontendCartAction extends waViewAction
                 }
             }
             $items[$item_id]['full_price'] = $price;
-
         }
 
 
-        $order = array('total' => $cart->total(false));
+        $total = $cart->total(false);
+        $order = array('total' => $total, 'items' => $items);
         $order['discount'] = $discount = shopDiscounts::calculate($order);
-        $order['total'] = $total = $cart->total();
+        $order['total'] = $total = $total - $order['discount'];
+
         $data = wa()->getStorage()->get('shop/checkout');
         $this->view->assign('cart', array(
             'items' => $items,
@@ -251,6 +304,7 @@ class shopFrontendCartAction extends waViewAction
                 $this->view->assign('used_affiliate_bonus', $order['params']['affiliate_bonus']);
             }
 
+            $order['currency'] = $this->getConfig()->getCurrency(false);
             $add_affiliate_bonus = shopAffiliate::calculateBonus($order);
             $this->view->assign('add_affiliate_bonus', round($add_affiliate_bonus, 2));
         }
@@ -263,6 +317,14 @@ class shopFrontendCartAction extends waViewAction
         $this->view->assign('frontend_cart', wa()->event('frontend_cart'));
 
         $this->getResponse()->setTitle(_w('Cart'));
+        
+        $checkout_flow = new shopCheckoutFlowModel();
+        $checkout_flow->add(array(
+            'code' => $code,
+            'step' => 0,
+            'description' => null /* TODO: Error message here if exists */
+        ));
+        
     }
 
 }

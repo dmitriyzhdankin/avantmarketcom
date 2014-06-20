@@ -17,16 +17,24 @@ class waViewHelper
     /**
      * @var waSystem
      */
-    protected $wa;
     protected $view;
     protected $version;
+    protected $app_id;
     protected static $helpers = array();
     protected static $params = array();
 
     public function __construct(waView $view)
     {
         $this->view = $view;
-        $this->wa = wa();
+        $this->app_id = wa()->getApp();
+    }
+
+    /**
+     * @return waAppConfig
+     */
+    protected function getConfig()
+    {
+        return wa($this->app_id)->getConfig();
     }
 
     public function header()
@@ -36,14 +44,14 @@ class waViewHelper
 
     public function app()
     {
-        return $this->wa->getApp();
+        return wa()->getApp();
     }
 
     public function apps()
     {
-        if ($this->wa->getEnv() == 'frontend') {
-            $domain = $this->wa->getRouting()->getDomain(null, true);
-            $domain_config_path = $this->wa->getConfig()->getConfigPath('domains/'.$domain.'.php', true, 'site');
+        if (wa()->getEnv() == 'frontend') {
+            $domain = wa()->getRouting()->getDomain(null, true);
+            $domain_config_path = $this->getConfig()->getConfigPath('domains/'.$domain.'.php', true, 'site');
             if (file_exists($domain_config_path)) {
                 /**
                  * @var $domain_config array
@@ -56,19 +64,102 @@ class waViewHelper
                     unset($row);
                     return $domain_config['apps'];
                 }
-                return $this->wa->getFrontendApps($domain, isset($domain_config['name']) ? $domain_config['name'] : null, true);
+                return wa()->getFrontendApps($domain, isset($domain_config['name']) ? $domain_config['name'] : null, true);
             } else {
-                return $this->wa->getFrontendApps($domain, null, true);
+                return wa()->getFrontendApps($domain, null, true);
             }
         } else {
-            return $this->wa->getUser()->getApps();
+            return wa()->getUser()->getApps();
         }
+    }
+
+    /**
+     * @return array
+     * array(
+     *     'shop' => 'shop my nav html...',
+     *     'helpdesk' => 'helpdesk my nav html...',
+     *     ...
+     * )
+     */
+    public function myNav($ul_class = true)
+    {
+        $routes = wa()->getRouting()->getRoutes();
+        $apps = wa()->getApps();
+        $result = array();
+        foreach ($routes as $r) {
+            if (isset($r['app']) && !empty($apps[$r['app']]['my_account'])) {
+                $result[$r['app']] = $r;
+            }
+        }
+
+        $old_app = wa()->getApp();
+        $my_nav_selected = $this->view->getVars('my_nav_selected');
+        $old_params = waRequest::param();
+
+        $i = 0;
+        foreach ($result as $app_id => $r) {
+            unset($r['url']);
+            unset($r['app']);
+            if ($i || $old_app != $app_id) {
+                waSystem::getInstance($app_id, null, true);
+                waRequest::setParam($r);
+            }
+            $class_name = $app_id.'MyNavAction';
+            if (class_exists($class_name)) {
+                /**
+                 * @var waViewAction $action
+                 */
+                try {
+                    $action = new $class_name();
+                    wa()->getView()->assign('my_nav_selected', $app_id == $old_app ? $my_nav_selected : '');
+                    $result[$app_id] = $action->display();
+                } catch (Exception $e) {
+                    unset($result[$app_id]);
+                }
+            } else {
+                unset($result[$app_id]);
+            }
+            $i++;
+        }
+
+        if (isset($app_id) && $old_app != $app_id) {
+            waRequest::setParam($old_params);
+            wa()->setActive($old_app);
+        }
+
+        $result = array_reverse($result, true);
+        if ($ul_class) {
+            $html = '<ul'.(is_string($ul_class) ? ' class="'.$ul_class.'"' : '').'>';
+            foreach ($result as $app_result) {
+                $html .= $app_result;
+            }
+            $html .= '</ul>';
+            return $html;
+        } else {
+            return $result;
+        }
+    }
+
+    public function myUrl()
+    {
+        $auth = wa()->getAuthConfig();
+        if (!empty($auth['app'])) {
+            $app = wa()->getAppInfo($auth['app']);
+            if (!empty($app['my_account'])) {
+                return wa()->getRouteUrl($auth['app'].'/frontend/my');
+            }
+        }
+        $app = wa()->getAppInfo();
+        if (!empty($app['my_account'])) {
+            return wa()->getRouteUrl('/frontend/my');
+        }
+        return null;
     }
 
     public function headJs()
     {
-        $domain = $this->wa->getRouting()->getDomain(null, true);
-        $domain_config_path = $this->wa->getConfig()->getConfigPath('domains/'.$domain.'.php', true, 'site');
+        $domain = wa()->getRouting()->getDomain(null, true);
+        $domain_config_path = $this->getConfig()->getConfigPath('domains/'.$domain.'.php', true, 'site');
         if (file_exists($domain_config_path)) {
             /**
              * @var $domain_config array
@@ -78,13 +169,14 @@ class waViewHelper
             if (!empty($domain_config['head_js'])) {
                 $html .= $domain_config['head_js'];
             }
+            $response = wa()->getResponse();
             if (!empty($domain_config['google_analytics'])) {
                 $html .= <<<HTML
 <script type="text/javascript">
   var _gaq = _gaq || [];
   _gaq.push(['_setAccount', '{$domain_config['google_analytics']}']);
   _gaq.push(['_trackPageview']);
- {$this->wa->getResponse()->getGoogleAnalytics()}
+ {$response->getGoogleAnalytics()}
   (function() {
       var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
       ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
@@ -101,13 +193,13 @@ HTML;
 
     public function isAuthEnabled()
     {
-        $config = $this->wa->getAuthConfig();
+        $config = wa()->getAuthConfig();
         return isset($config['auth']) && $config['auth'];
     }
 
     public function user($field=null, $format='html')
     {
-        $user = $this->wa->getUser();
+        $user = wa()->getUser();
         if ($field !== null) {
             return $user->get($field, $format);
         } else {
@@ -117,17 +209,17 @@ HTML;
 
     public function userRights($name)
     {
-        return $this->wa->getUser()->getRights($this->wa->getApp(), $name);
+        return wa()->getUser()->getRights(wa()->getApp(), $name);
     }
 
     public function userId()
     {
-        return $this->wa->getUser()->getId();
+        return wa()->getUser()->getId();
     }
 
     public function locale()
     {
-        return $this->wa->getLocale();
+        return wa()->getLocale();
     }
 
     public function userLocale()
@@ -137,16 +229,27 @@ HTML;
 
     public function appName($escape = true)
     {
-        $app_info = $this->wa->getAppInfo();
+        $app_info = wa()->getAppInfo();
         $name = $app_info['name'];
+        return $escape ? htmlspecialchars($name) : $name;
+    }
+
+    public function pluginName($plugin_id, $escape = true)
+    {
+        $plugin = $this->getConfig()->getPluginInfo($plugin_id);
+        $name = $plugin['name'];
         return $escape ? htmlspecialchars($name) : $name;
     }
 
     public function accountName($escape = true)
     {
-        $app_settings_model = new waAppSettingsModel();
-        $name = $app_settings_model->get('webasyst', 'name', 'Webasyst');
+        $name = wa()->getSetting('name', 'Webasyst', 'webasyst');
         return $escape ? htmlspecialchars($name) : $name;
+    }
+
+    public function setting($name, $default = '', $app_id = null)
+    {
+        return wa()->getSetting($name, $default, $app_id);
     }
 
     public function module($default = null)
@@ -156,20 +259,21 @@ HTML;
 
     public function css()
     {
-        if ($this->wa->getEnv() == 'backend') {
-            $css = '<link href="'.$this->wa->getRootUrl().'wa-content/css/wa/wa-1.0.css?v'.$this->version(true).'" rel="stylesheet" type="text/css" >
-<!--[if IE 9]><link type="text/css" href="'.$this->wa->getRootUrl().'wa-content/css/wa/wa-1.0.ie9.css" rel="stylesheet"><![endif]-->
-<!--[if IE 8]><link type="text/css" href="'.$this->wa->getRootUrl().'wa-content/css/wa/wa-1.0.ie8.css" rel="stylesheet"><![endif]-->
-<!--[if IE 7]><link type="text/css" href="'.$this->wa->getRootUrl().'wa-content/css/wa/wa-1.0.ie7.css" rel="stylesheet"><![endif]-->'."\n";
+        if (wa()->getEnv() == 'backend') {
+            $css = '<link href="'.wa()->getRootUrl().'wa-content/css/wa/wa-1.0.css?v'.$this->version(true).'" rel="stylesheet" type="text/css" >
+<!--[if IE 9]><link type="text/css" href="'.wa()->getRootUrl().'wa-content/css/wa/wa-1.0.ie9.css" rel="stylesheet"><![endif]-->
+<!--[if IE 8]><link type="text/css" href="'.wa()->getRootUrl().'wa-content/css/wa/wa-1.0.ie8.css" rel="stylesheet"><![endif]-->
+<!--[if IE 7]><link type="text/css" href="'.wa()->getRootUrl().'wa-content/css/wa/wa-1.0.ie7.css" rel="stylesheet"><![endif]-->
+<link type="text/css" rel="stylesheet" href="'.wa()->getRootUrl().'wa-content/font/ruble/arial/fontface.css">'."\n";
         } else {
             $css = '';
         }
-        return $css.$this->wa->getResponse()->getCss(true);
+        return $css.wa()->getResponse()->getCss(true);
     }
 
     public function js()
     {
-        return $this->wa->getResponse()->getJs(true);
+        return wa()->getResponse()->getJs(true);
     }
 
     /**
@@ -179,16 +283,16 @@ HTML;
     public function version($app_id = null)
     {
         if ($app_id === true) {
-            $app_info = $this->wa->getAppInfo('webasyst');
+            $app_info = wa()->getAppInfo('webasyst');
             return isset($app_info['version']) ? $app_info['version'] : '0.0.1';
         } else {
             if ($this->version === null) {
-                $app_info = $this->wa->getAppInfo($app_id);
+                $app_info = wa()->getAppInfo($app_id);
                 $this->version = isset($app_info['version']) ? $app_info['version'] : '0.0.1';
                 if (SystemConfig::isDebug()) {
                     $this->version .= ".".time();
                 } elseif (!$app_id) {
-                    $file = $this->wa->getAppPath('lib/config/build.php', $app_id);
+                    $file = wa()->getAppPath('lib/config/build.php', $app_id);
                     if (file_exists($file)) {
                         $build = include($file);
                         $this->version .= '.'.$build;
@@ -219,6 +323,11 @@ HTML;
         return waRequest::request($name, $default);
     }
 
+    public function cookie($name, $default = null)
+    {
+        return waRequest::cookie($name, $default);
+    }
+
     public function param($name, $default = null)
     {
         return waRequest::param($name, $default);
@@ -226,20 +335,20 @@ HTML;
 
     public function url($absolute = false)
     {
-        return $this->wa->getRootUrl($absolute);
+        return wa()->getRootUrl($absolute);
     }
 
     public function domainUrl()
     {
-        return $this->wa->getConfig()->getHostUrl();
+        return $this->getConfig()->getHostUrl();
     }
 
     public function currentUrl($absolute = false, $without_params = false)
     {
-        $url = $this->wa->getConfig()->getCurrentUrl();
+        $url = $this->getConfig()->getCurrentUrl();
         if ($without_params) {
             if (($i = strpos($url, '?')) !== false) {
-                return substr($url, 0, $i);
+                $url = substr($url, 0, $i);
             }
         }
         if ($absolute) {
@@ -251,7 +360,7 @@ HTML;
 
     public function getUrl($route, $params = array(), $absolute = false)
     {
-        return $this->wa->getRouteUrl($route, $params, $absolute);
+        return wa()->getRouteUrl($route, $params, $absolute);
     }
 
     public function contacts($hash = null, $fields = 'id,name')
@@ -278,18 +387,19 @@ HTML;
     public function title($title = null)
     {
         if (!$title) {
-            return $this->wa->getResponse()->getTitle();
+            return wa()->getResponse()->getTitle();
         } else {
-            return $this->wa->getResponse()->setTitle($title);
+            wa()->getResponse()->setTitle($title);
+            return '';
         }
     }
 
     public function meta($name, $value = null)
     {
         if ($value) {
-            $this->wa->getResponse()->setMeta($name, $value);
+            wa()->getResponse()->setMeta($name, $value);
         } else {
-            return $this->wa->getResponse()->getMeta($name);
+            return wa()->getResponse()->getMeta($name);
         }
     }
 
@@ -352,21 +462,35 @@ HTML;
         }
     }
 
-    public function getEnv()
+    public function session($key, $value = null)
     {
-        return $this->wa->getEnv();
+        return $this->storage($key, $value);
     }
 
-    public function block($id)
+    public function storage($key, $value = null)
     {
-        if ($id &&  $this->wa->appExists('site')) {
+        if ($value === null) {
+            return wa()->getStorage()->get($key);
+        } else {
+            wa()->getStorage()->set($key, $value);
+        }
+    }
+
+    public function getEnv()
+    {
+        return wa()->getEnv();
+    }
+
+    public function block($id, $params = array())
+    {
+        if ($id &&  wa()->appExists('site')) {
             wa('site');
             $model = new siteBlockModel();
             $block = $model->getById($id);
 
             if (!$block && strpos($id, '.') !== false) {
                 list($app_id, $id) = explode('.', $id);
-                $path = $this->wa->getConfig()->getAppsPath($app_id, 'lib/config/site.php');
+                $path = $this->getConfig()->getAppsPath($app_id, 'lib/config/site.php');
                 if (file_exists($path)) {
                     $site_config = include($path);
                     if (isset($site_config['blocks'][$id])) {
@@ -380,6 +504,7 @@ HTML;
             }
             if ($block) {
                 try {
+                    $this->view->assign($params);
                     return $this->view->fetch('string:'.$block['content']);
                 } catch (Exception $e) {
                     if (waSystemConfig::isDebug()) {
@@ -406,41 +531,31 @@ HTML;
             $to = waMail::getDefaultFrom();
         }
         if (!$to) {
-            $errors['all'] = 'Recipient (administrator) email is not valid';
+            $errors['all'] = _ws('Recipient (administrator) email is not valid');
             return false;
         }
-        if (!$this->wa->getCaptcha()->isValid()) {
+        if (!wa($this->app_id)->getCaptcha()->isValid()) {
             $errors['captcha'] = _ws('Invalid captcha');
         }
-
-        
         $email = $this->post('email');
         $email_validator = new waEmailValidator();
-        $subject = $this->post('subject').' - '.$this->accountName();
+        $subject = trim($this->post('subject', _ws('Website request')));
         $body = trim($this->post('body'));
         if (!$body) {
-            $errors['body'] = 'Please define your request';
+            $errors['body'] = _ws('Please define your request');
         }
-        if (!$email_validator->isValid($email)) {
+        if (!$email) {
+            $errors['email'] = _ws('Email is required');
+        } elseif (!$email_validator->isValid($email)) {
             $errors['email'] = implode(', ', $email_validator->getErrors());
         }
-        
-        
         if (!$errors) {
-            $m = new waMailMessage($subject, $body);
+            $m = new waMailMessage($subject, nl2br($body));
             $m->setTo($to);
             $m->setFrom(array($email => $this->post('name')));
-            $header = "From: ". $this->post('name') . " <" . $email . ">\r\n";
-            $header .= "Content-type:text/html; charset = utf-8";
-            
-            $header2 = "From: Avantmarket.com <info@avantmarket.com>\r\n";
-            $header2 .= "Content-type:text/html; charset = utf-8";
-            
-            reset($to);
-            if (!mail('info@avantmarket.com', "=?utf-8?B?".base64_encode($subject)."?=", 'От: '.$email.', Имя: '.$this->post('name').', Сообщение: '.$body, $header)) {
-                $errors['all'] = 'An error occurred while attempting to send your request. Please try again in a minute.';
+            if (!$m->send()) {
+                $errors['all'] = _ws('An error occurred while attempting to send your request. Please try again in a minute.');
             } else {
-          mail($email, "=?utf-8?B?Форма обратной связи интернет-магазина Avantmarket.com?=", 'Благодарим вас за сообщение, в ближайшее время мы с вами свяжемся.', $header2);
                 return true;
             }
         }
@@ -452,13 +567,15 @@ HTML;
         return '<input type="hidden" name="_csrf" value="'.waRequest::cookie('_csrf', '').'" />';
     }
 
-    public function captcha($options = array(), $error = null)
+    public function captcha($options = array(), $error = null, $absolute = null, $refresh = null)
     {
         if (!is_array($options)) {
+            $refresh = $absolute;
+            $absolute = $error;
             $error = $options;
             $options = array();
         }
-        return $this->wa->getCaptcha($options)->getHtml($error);
+        return wa($this->app_id)->getCaptcha($options)->getHtml($error, $absolute, $refresh);
     }
 
     public function captchaUrl($add_random = true)
@@ -468,25 +585,32 @@ HTML;
 
     public function signupUrl()
     {
-        $auth = $this->wa->getAuthConfig();
-        return $this->wa->getRouteUrl((isset($auth['app']) ? $auth['app'] : '').'/signup');
+        $auth = wa()->getAuthConfig();
+        return wa()->getRouteUrl((isset($auth['app']) ? $auth['app'] : '').'/signup');
     }
 
-    public function loginUrl()
+    public function loginUrl($absolute = false)
     {
-        $auth = $this->wa->getAuthConfig();
-        return $this->wa->getRouteUrl((isset($auth['app']) ? $auth['app'] : '').'/login');
+        $auth = wa()->getAuthConfig();
+        return wa()->getRouteUrl((isset($auth['app']) ? $auth['app'] : '').'/login', array(), $absolute);
     }
 
     public function forgotPasswordUrl()
     {
-        $auth = $this->wa->getAuthConfig();
-        return $this->wa->getRouteUrl((isset($auth['app']) ? $auth['app'] : '').'/forgotpassword');
+        $auth = wa()->getAuthConfig();
+        return wa()->getRouteUrl((isset($auth['app']) ? $auth['app'] : '').'/forgotpassword');
     }
 
-    public function loginForm($error = '', $form = true)
+    /**
+     * @param string $error
+     * @param int $form
+     * 1 - with <form action="">
+     * 2 - with <form action="LOGIN_URL">
+     * @return string
+     */
+    public function loginForm($error = '', $form = 1)
     {
-        $auth = $this->wa->getAuth();
+        $auth = wa($this->app_id)->getAuth();
         $field_id = $auth->getOption('login');
         if ($field_id == 'login') {
             $field_name = _ws('Login');
@@ -499,14 +623,14 @@ HTML;
             }
         }
         return '<div class="wa-form">'.
-            ($form ? '<form action="'.$this->loginUrl().'" method="post">' : '').'
-                <div class="wa-field">
+            ($form ? '<form action="'.($form === 2 ? $this->loginUrl() : '').'" method="post">' : '').'
+                <div class="wa-field wa-field-'.$field_id.'">
                     <div class="wa-name">'.$field_name.'</div>
                     <div class="wa-value">
                         <input'.($error ? ' class="wa-error"' : '').' type="text" name="login" value="'.htmlspecialchars(waRequest::post('login')).'">
                     </div>
                 </div>
-                <div class="wa-field">
+                <div class="wa-field wa-field-password">
                     <div class="wa-name">'._ws('Password').'</div>
                     <div class="wa-value">
                         <input'.($error ? ' class="wa-error"' : '').' type="password" name="password">
@@ -516,7 +640,11 @@ HTML;
                 <div class="wa-field">
                     <div class="wa-value wa-submit">
                         <input type="hidden" name="wa_auth_login" value="1">
-                        <input type="submit" value="'._ws('Sign In').'"> <a href="'.$this->getUrl('/forgotpassword').'">'._ws('Forgot password?').'</a>
+                        <input type="submit" value="'._ws('Sign In').'">
+                        &nbsp;
+                        <a href="'.$this->getUrl('/forgotpassword').'">'._ws('Forgot password?').'</a>
+                        &nbsp;
+                        <a href="'.$this->getUrl('/signup').'">'._ws('Sign up').'</a>
                     </div>
                 </div>'.
             ($form ? '</form>' : '').'
@@ -528,7 +656,7 @@ HTML;
         return '<div class="wa-form">
     <form action="" method="post">
         <div class="wa-field">
-            <div class="wa-name">'._ws('Email').'</div>
+            <div class="wa-name wa-field-email">'._ws('Email').'</div>
             <div class="wa-value">
                 <input'.($error ? ' class="wa-error"' : '').' type="text" name="login" value="'.htmlspecialchars(waRequest::request('login', '', waRequest::TYPE_STRING)).'" autocomplete="off">
                 '.($error ? '<em class="wa-error-msg">'.$error.'</em>' : '').'
@@ -549,12 +677,12 @@ HTML;
         return '<div class="wa-form">
     <form action="" method="post">
         <div class="wa-field">
-            <div class="wa-name">'._ws('Enter a new password').'</div>
+            <div class="wa-name wa-field-password">'._ws('Enter a new password').'</div>
             <div class="wa-value">
                 <input'.($error ? ' class="wa-error"' : '').' name="password" type="password">
             </div>
         </div>
-        <div class="wa-field">
+        <div class="wa-field wa-field-password">
             <div class="wa-name">'._ws('Re-enter password').'</div>
             <div class="wa-value">
                 <input'.($error ? ' class="wa-error"' : '').' name="password_confirm" type="password">
@@ -572,7 +700,7 @@ HTML;
 
     public function signupFields($errors = array())
     {
-        $config = $this->wa->getAuthConfig();
+        $config = wa()->getAuthConfig();
         $config_fields = isset($config['fields']) ? $config['fields']: array(
             'firstname',
             'lastname',
@@ -649,17 +777,17 @@ HTML;
                 $html .= '<div class="wa-field wa-separator"></div>';
             }
         }
-        $config = $this->wa->getAuthConfig();
+        $config = wa()->getAuthConfig();
         if (isset($config['signup_captcha']) && $config['signup_captcha']) {
             $html .= '<div class="wa-field"><div class="wa-value">';
-            $html .= $this->wa->getCaptcha()->getHtml(isset($errors['captcha']) ? $errors['captcha'] : '');
+            $html .= wa($this->app_id)->getCaptcha()->getHtml(isset($errors['captcha']) ? $errors['captcha'] : '');
             if (isset($errors['captcha'])) {
                 $html .= '<em class="wa-error-msg">'.$errors['captcha'].'</em>';
             }
             $html .= '</div></div>';
         }
         $html .= '<div class="wa-field"><div class="wa-value wa-submit">
-            <input type="submit" value="'._ws('Sign up').'"> '.sprintf(_ws('or <a href="%s">login</a> if you already have an account'), $this->getUrl('/login')).'
+            <input type="submit" value="'._ws('Sign Up').'"> '.sprintf(_ws('or <a href="%s">login</a> if you already have an account'), $this->getUrl('/login')).'
         </div></div>';
         $html .= '</form></div>';
         return $html;
@@ -690,7 +818,7 @@ HTML;
         if ($f->isMulti()) {
             $f->setParameter('multi', false);
         }
-        $html = '<div class="wa-field">
+        $html = '<div class="wa-field wa-field-'.$f->getId().'">
                 <div class="wa-name">'.$name.'</div>
                 <div class="wa-value">'.$f->getHTML($params, $error !== false ? 'class="wa-error"' : '');
         if ($error) {
@@ -702,7 +830,7 @@ HTML;
 
     public function authAdapters($return_array = false)
     {
-        $adapters = $this->wa->getAuthAdapters();
+        $adapters = wa()->getAuthAdapters();
         if ($return_array) {
             return $adapters;
         }
@@ -710,18 +838,18 @@ HTML;
             return '';
         }
         $html = '<div class="wa-auth-adapters"><ul>';
-        $url = $this->wa->getRootUrl(false, true).'oauth.php?app='.$this->app().'&provider=';
+        $url = wa()->getRootUrl(false, true).'oauth.php?app='.$this->app().'&amp;provider=';
         foreach ($adapters as $adapter) {
             /**
              * @var waAuthAdapter $adapter
              */
-            $html .= '<li><a href="'.$url.$adapter->getId().'"><img alt="'.$adapter->getName().'" src="'.$adapter->getIcon().'">'.$adapter->getName().'</a></li>';
+            $html .= '<li><a href="'.$url.$adapter->getId().'"><img alt="'.$adapter->getName().'" src="'.$adapter->getIcon().'"/>'.$adapter->getName().'</a></li>';
         }
         $html .= '</ul><p>';
         $html .= _ws("Authorize either by entering your contact information, or through one of the websites listed above.");
         $html .= '</p></div>';
         $html .= <<<HTML
-<script>
+<script type="text/javascript">
 $("div.wa-auth-adapters a").click(function () {
     var left = (screen.width - 600) / 2;
     var top = (screen.height - 400) / 2;
@@ -734,11 +862,110 @@ HTML;
         return $html;
     }
 
+    public function oauth($provider, $config, $token, $code = null)
+    {
+        /**
+         * @var waOAuth2Adapter $auth
+         */
+        $auth = wa()->getAuth($provider, $config);
+        if (!$token && $code) {
+            $token = $auth->getAccessToken($code);
+        }
+        $data = $auth->getUserData($token);
+
+        if (wa()->getUser()->getId()) {
+            wa()->getUser()->save(array(
+                $data['source'].'_id' => $data['source_id']
+            ));
+            return wa()->getUser();
+        }
+
+        $app_id = wa()->getApp();
+        $contact_id = 0;
+        // find contact by auth adapter id, i.e. facebook_id
+        $contact_data_model = new waContactDataModel();
+        $row = $contact_data_model->getByField(array(
+            'field' => $data['source'].'_id',
+            'value' => $data['source_id'],
+            'sort' => 0
+        ));
+        if ($row) {
+            $contact_id = $row['contact_id'];
+        }
+        // try find user by email
+        if (!$contact_id && isset($data['email'])) {
+            $sql = "SELECT c.id FROM wa_contact_emails e
+            JOIN wa_contact c ON e.contact_id = c.id
+            WHERE e.email = s:email AND e.sort = 0 AND c.password != ''";
+            $contact_model = new waContactModel();
+            $contact_id = $contact_model->query($sql, array('email' => $data['email']))->fetchField('id');
+            // save source_id
+            if ($contact_id) {
+                $contact_data_model->insert(array(
+                    'contact_id' => $contact_id,
+                    'field' => $data['source'].'_id',
+                    'value' => $data['source_id'],
+                    'sort' => 0
+                ));
+            }
+        }
+        // create new contact
+        if (!$contact_id) {
+            $contact = new waContact();
+            $data[$data['source'].'_id'] = $data['source_id'];
+            $data['create_method'] = $data['source'];
+            $data['create_app_id'] = $app_id;
+            // set random password (length = default hash length - 1, to disable ability auth using login and password)
+            $contact->setPassword(substr(waContact::getPasswordHash(uniqid(time(), true)), 0, -1), true);
+            unset($data['source']);
+            unset($data['source_id']);
+            if (isset($data['photo_url'])) {
+                $photo_url = $data['photo_url'];
+                unset($data['photo_url']);
+            } else {
+                $photo_url = false;
+            }
+            $contact->save($data);
+            $contact_id = $contact->getId();
+
+            if ($contact_id && $photo_url) {
+                $photo_url_parts = explode('/', $photo_url);
+                // copy photo to tmp dir
+                $path = wa()->getTempPath('auth_photo/'.$contact_id.'.'.md5(end($photo_url_parts)), $app_id);
+                if (function_exists('curl_init')) {
+                    $ch = curl_init($photo_url);
+                    curl_setopt($ch, CURLOPT_HEADER, 0);
+                    curl_setopt($ch, CURLOPT_FOLLOWLOCATION, 1);
+                    curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+                    curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 25);
+                    $photo = curl_exec($ch);
+                    curl_close($ch);
+                } else {
+                    $photo = file_get_contents($photo_url);
+                }
+                if ($photo) {
+                    file_put_contents($path, $photo);
+                    $contact->setPhoto($path);
+                }
+            }
+        } else {
+            $contact = new waContact($contact_id);
+        }
+
+        // auth user
+        if ($contact_id) {
+            wa()->getAuth()->auth(array('id' => $contact_id));
+            return $contact;
+        }
+        return false;
+
+    }
+
     public function __get($app)
     {
         if (!isset(self::$helpers[$app])) {
-            $wa = $this->wa;
-            if ($this->app() !== $app) {
+            $wa = wa($this->app_id);
+            if ($wa->getConfig()->getApplication() !== $app) {
                 if (wa()->appExists($app)) {
                     $wa = wa($app);
                 } else {

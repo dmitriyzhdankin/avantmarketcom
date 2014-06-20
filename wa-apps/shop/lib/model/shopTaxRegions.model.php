@@ -10,15 +10,21 @@ class shopTaxRegionsModel extends waModel
     }
 
     /**
-     * @param array $arr tax_id => address array
+     * @param int $tax_id
+     * @param array $address
+     * @return float
      */
     public function getByTaxAddress($tax_id, $address)
     {
         $result = false;
-        if (!empty($address['country'])) {
+        $country = ifempty($address['country'], wa('shop')->getConfig()->getGeneralSettings('country'));
+
+        if ($country) {
+            $data = array('id' => $tax_id, 'country' => $country);
             if (empty($address['region'])) {
                 $region_sql = " AND region_code IS NULL ";
             } else {
+                $data['region'] = $address['region'];
                 $region_sql = " AND (region_code IS NULL OR region_code=:region) ";
             }
 
@@ -29,8 +35,7 @@ class shopTaxRegionsModel extends waModel
                         {$region_sql}
                     ORDER BY region_code IS NOT NULL
                     LIMIT 1";
-            $address['id'] = $tax_id;
-            $result = $this->query($sql, $address)->fetchField();
+            $result = $this->query($sql, $data)->fetchField();
         }
 
         if ($result === false) {
@@ -58,7 +63,7 @@ class shopTaxRegionsModel extends waModel
             if (isset($rest_rates[$tax_id])) {
                 $result = $rest_rates[$tax_id];
             }
-            if (!empty($address['country']) && self::isEuropean($address['country'])) {
+            if ($country && self::isEuropean($country)) {
                 $result = ifset($eu_rates[$tax_id]);
             }
         }

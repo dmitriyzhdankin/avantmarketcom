@@ -85,7 +85,7 @@ class waContact implements ArrayAccess
 
     public function getPhoto($width = null, $height = null)
     {
-        return self::getPhotoUrl($this->id, $this->get('photo'), $width, $height);
+        return self::getPhotoUrl($this->id, $this->id ? $this->get('photo') : null, $width, $height);
     }
 
     public static function getPhotoUrl($id, $ts, $width = null, $height = null)
@@ -456,10 +456,9 @@ class waContact implements ArrayAccess
             return $errors;
         }
 
+        $is_add = false;
         // Saving to all storages
         try {
-
-            $is_add = false;
             if (!$this->id) {
                 $is_add = true;
                 $storage = 'waContactInfoStorage';
@@ -470,6 +469,7 @@ class waContact implements ArrayAccess
                 waContactFields::getStorage($storage)->set($this, $storage_data);
             }
             $this->data = array();
+            wa()->event(array('contacts', 'save'), $this);
         } catch (Exception $e) {
             // remove created contact
             if ($is_add && $this->id) {
@@ -622,7 +622,7 @@ class waContact implements ArrayAccess
         }
     }
 
-    public function getSettings($app_id, $name = null)
+    public function getSettings($app_id, $name = null, $default = null)
     {
         // For general settings
         if (!$app_id) {
@@ -635,34 +635,9 @@ class waContact implements ArrayAccess
         }
 
         if ($name) {
-            return isset($this->settings[$app_id][$name]) ? $this->settings[$app_id][$name] : null;
+            return isset($this->settings[$app_id][$name]) ? $this->settings[$app_id][$name] : $default;
         } else {
             return $this->settings[$app_id];
-        }
-    }
-
-    public function getExtraSettings($app_id, $name = null)
-    {
-        $settings = $this->getSettings($app_id, $name);
-        if ($name !== null) {
-            $settings = explode("|", $settings);
-            $result = array();
-            foreach ($settings as $value) {
-                $value = explode(":", $value, 2);
-                $result[$value[0]] = $value[1];
-            }
-            return $result;
-        } else {
-            foreach ($settings as $key => $setting) {
-                $setting = explode("|", $setting);
-                $result = array();
-                foreach ($setting as $value) {
-                    $value = explode(":", $value, 2);
-                    $result[$value[0]] = $value[1];
-                }
-                $settings[$key] = $result;
-            }
-            return $settings;
         }
     }
 
@@ -754,12 +729,7 @@ class waContact implements ArrayAccess
     {
         if (!$this->isAdmin($app_id)) {
             $right_model = new waContactRightsModel();
-            return $right_model->insert(array(
-                'app_id' => $app_id,
-                'group_id' => -$this->id,
-                'name' => $name,
-                'value' => $value
-            ));
+            return $right_model->save($this->id, $app_id, $name, $value);
         }
         return true;
     }

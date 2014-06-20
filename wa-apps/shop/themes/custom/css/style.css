@@ -2504,9 +2504,11 @@ article.view_post{border-bottom: 1px solid #e0e0e0;}
 /**************
  * Top button *
  **************/
-#top_button{margin: 25px 0 15px 0}
+#top_button{margin: 25px 0 0px 0}
 .button_block{
 	display: block;
+	float:left;
+	margin-bottom:15px;
 	width: 312px;
 	height: 101px;
 	padding: 0px 0px 0px 0px;

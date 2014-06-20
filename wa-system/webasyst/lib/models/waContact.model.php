@@ -63,6 +63,9 @@ class waContactModel extends waModel
     {
         if ($send_event) {
             // Fire @event contacts.delete allowing other applications to clean up their data
+            if (!is_array($id)) {
+                $id = array($id);
+            }
             wa()->event(array('contacts', 'delete'), $id);
         }
 
@@ -124,9 +127,9 @@ class waContactModel extends waModel
         WHERE e.email = s:0";
         if ($with_password !== null) {
             if ($with_password) {
-                $sql .= ' AND c.password IS NOT NULL';
+                $sql .= " AND c.password != ''";
             } else {
-                $sql .= ' AND c.password IS NULL';
+                $sql .= " AND c.password = ''";
             }
         }
         $sql .= ' LIMIT 1';

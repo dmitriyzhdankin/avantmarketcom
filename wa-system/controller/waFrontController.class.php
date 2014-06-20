@@ -33,14 +33,15 @@ class waFrontController
 
     public function dispatch()
     {
-        if ($this->system->getEnv() == 'frontend') {
+        $env = $this->system->getEnv();
+        if ($env == 'frontend') {
             $module = 'frontend';
         } else {
             $module = waRequest::get($this->options['module'], $this->system->getEnv());
         }
         $module = waRequest::param('module', $module);
         $action = waRequest::param('action', waRequest::get($this->options['action']));
-        $plugin = waRequest::param('plugin', waRequest::get('plugin', ''));
+        $plugin = waRequest::param('plugin', $env == 'backend' ? waRequest::get('plugin', '') : '');
         // event init
         if (!waRequest::request('background_process')) {
             if (method_exists($this->system->getConfig(), 'onInit')) {
@@ -129,6 +130,23 @@ class waFrontController
         }
         $class_names[] = $class_name;
 
+        // Single Action
+        $class_name = $prefix.($plugin ? ucfirst($plugin).'Plugin' : '').ucfirst($module).($action ? ucfirst($action) : '').'Action';
+        if (class_exists($class_name)) {
+            // get default view controller
+            /**
+             * @var $controller waDefaultViewController
+             */
+            $controller = $this->system->getDefaultController();
+            $controller->setAction($class_name);
+            $r = $controller->run();
+            if ($plugin) {
+                waSystem::popActivePlugin();
+            }
+            return $r;
+        }
+        $class_names[] = $class_name;
+
         // Controller Multi Actions, Zend/Symfony style
         $class_name = $prefix.($plugin ? ucfirst($plugin).'Plugin' : '').ucfirst($module).'Actions';
         if (class_exists($class_name, true)) {
@@ -141,22 +159,6 @@ class waFrontController
         }
         $class_names[] = $class_name;
 
-        // Single Action
-        $class_name = $prefix.($plugin ? ucfirst($plugin).'Plugin' : '').ucfirst($module).($action ? ucfirst($action) : '').'Action';
-        if (class_exists($class_name)) {
-            // get default view controller
-            /**
-             * @var $controller waDefaultViewController
-             */
-            $controller = $this->system->getFactory('default_controller', 'waDefaultViewController');
-            $controller->setAction($class_name);
-            $r = $controller->run();
-            if ($plugin) {
-                waSystem::popActivePlugin();
-            }
-            return $r;
-        }
-
         // Plugin is no longer active
         if ($plugin) {
             waSystem::popActivePlugin();
@@ -166,7 +168,6 @@ class waFrontController
         if ($action && $default) {
             return $this->execute($plugin, $module);
         }
-        $class_names[] = $class_name;
 
         // Too bad. 404.
         throw new waException(sprintf('Empty module and/or action after parsing the URL "%s" (%s/%s).<br />Not found classes: %s', $this->system->getConfig()->getCurrentUrl(), $module, $action,implode(', ',$class_names)), 404);

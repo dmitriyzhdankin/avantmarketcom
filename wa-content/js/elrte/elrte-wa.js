@@ -141,7 +141,7 @@ $.fn.elBorderSelect.defaults = {
 // wa panels
 elRTE.prototype.options.panels.wa_style = ["bold", "italic", "underline", "strikethrough"];
 elRTE.prototype.options.panels.wa_image = ["wa_image"];
-elRTE.prototype.options.panels.wa_links = ["wa_link", "unlink"];
+elRTE.prototype.options.panels.wa_links = ["wa_link", "unlink", "youtube"];
 elRTE.prototype.options.panels.wa_elements = ["wa_horizontalrule", "blockquote", "div", "stopfloat"];
 elRTE.prototype.options.panels.wa_tables = ["wa_table", "wa_tableprops", "tablerm", "tbrowbefore", "tbrowafter", "tbrowrm", "tbcolbefore", "tbcolafter", "tbcolrm", "wa_tbcellprops", "tbcellsmerge", "tbcellsplit"];
 
@@ -231,7 +231,7 @@ elRTE.prototype.ui.prototype.buttons.wa_link = function(rte, name) {
             this.domElem.removeClass('disabled').addClass('active');
         } else if (this.rte.dom.selectionHas(function(n) { return n.nodeName == 'A' && n.href; })) {
             this.domElem.removeClass('disabled').addClass('active');
-        } else if (!this.rte.selection.collapsed() || n.nodeName == 'IMG') {
+        } else if (!this.rte.selection.collapsed() || (n && n.nodeName == 'IMG')) {
             this.domElem.removeClass('disabled active');
         } else {
             this.domElem.addClass('disabled').removeClass('active');
@@ -332,7 +332,7 @@ elRTE.prototype.ui.prototype.buttons.wa_horizontalrule = function(rte, name) {
 
     this.update = function() {
         this.domElem.removeClass('disabled');
-        if (this.rte.selection.getEnd().nodeName == 'HR') {
+        if (this.rte.selection.getEnd() && this.rte.selection.getEnd().nodeName == 'HR') {
             this.domElem.addClass('active');
         } else {
             this.domElem.removeClass('active');
@@ -879,11 +879,11 @@ elRTE.prototype.ui.prototype.buttons.wa_image = function(rte, name) {
 
         this.d = $('<div id="elrte-wa_image" class="fields form"></div>')
         .append(dialog_row(this.rte.i18n('Image'),[
-                $("<label></label>")
-                    .append('<input type="radio" name="source" value="url" checked /> ' + this.rte.i18n('URL') + ' ')
+                $("<div class='label'></div>")
+                    .append('<label><input type="radio" name="source" value="url" checked />' + this.rte.i18n('URL') + '</label> ')
                     .append(this.src.src),
-                $("<label></label>")
-                    .append('<input type="radio" name="source" value="file" /> ' + this.rte.i18n('Upload') + ' ')
+                $("<div class='label'></div>")
+                    .append('<label><input type="radio" name="source" value="file" /> ' + this.rte.i18n('Upload') + ' </label>')
                     .append(this.src.file)
                     .append('<br /><span class="hint">' + ($_ ? $_('Image will be uploaded into') : this.rte.i18n('Image will be uploaded into')) + ' '+(rte.options.wa_image_upload_path?rte.options.wa_image_upload_path:'/wa-data/public/site/img/')+'</span>')]
                 ))
@@ -902,6 +902,10 @@ elRTE.prototype.ui.prototype.buttons.wa_image = function(rte, name) {
             'class': 'wa-elrte-dialog',
             title : this.rte.i18n('Image'),
             buttons: '<input type="submit" class="button green" value="' + this.rte.i18n('OK') + '"> ' + this.rte.i18n('or') + ' <a href="#" class="inline-link cancel"><b><i>' + this.rte.i18n('cancel') + '</i></b></a>',
+            onLoad: function() {
+                var d = $(this);
+                
+            },
             onClose: function () {
                 self.bookmarks && self.rte.selection.moveToBookmark(self.bookmarks);
             },
@@ -915,21 +919,41 @@ elRTE.prototype.ui.prototype.buttons.wa_image = function(rte, name) {
                     f.attr('target', iframe.attr('name'));
                     f.attr('action', rte.options.wa_image_upload);
                     iframe.one('load', function () {
-                        var response = $.parseJSON($(this).contents().find('body').html());
-                        if (response.status == 'ok') {
-                            self.src.src.val(response.data);
-                            self.src.height.val('');
-                            self.src.width.val('');
-                            self.set();
-                            d.trigger('close');
-                        } else if (response.status == 'fail') {
-                            d.find("input[type=submit]").removeAttr('disabled');
-                            alert(response.errors);
+                        var onLoad = function(response) {
+                            if (response.status == 'ok') {
+                                self.src.src.val(response.data);
+                                self.src.height.val('');
+                                self.src.width.val('');
+                                self.set();
+                                d.trigger('close');
+                            } else if (response.status == 'fail') {
+                                d.find("input[type=submit]").removeAttr('disabled');
+                                alert(response.errors);
+                            } else {
+                                d.find("input[type=submit]").removeAttr('disabled');
+                                alert('Unknown error');
+                            }
+                            $(this).remove();
+                        };
+                        
+                        var that = $(this);
+                        var html = that.contents().find('body').html();
+                        if (html) {
+                            onLoad($.parseJSON(html));
                         } else {
-                            d.find("input[type=submit]").removeAttr('disabled');
-                            alert('Unknown error');
+                            var tries = 25;
+                            var makeTry = function() {
+                                var html = that.contents().find('body').html();
+                                if (!html && tries) {
+                                    tries -= 1;
+                                    setTimeout(makeTry, 250);
+                                } else if (html) {
+                                    onLoad($.parseJSON(html));
+                                }
+                            };
+                            setTimeout(makeTry, 250);
                         }
-                        $(this).remove();
+                        
                     });
                 } else {
                     self.set();
@@ -937,6 +961,18 @@ elRTE.prototype.ui.prototype.buttons.wa_image = function(rte, name) {
                     return false;
                 }
             }
+        });
+        
+        // When focus on input, check near radio-button. For FF standart html pill works incorrect
+        // See http://jsfiddle.net/dLP6A/
+        $('.label input[type=text]', this.d).focus(function() {
+            $(this).closest('.label').find('input[type=radio]').attr('checked', true);
+        });
+        
+        // When click to file inut in Chrome check near radio-button. For Chrome standart html pill works incorrect
+        // See http://jsfiddle.net/f9RJn/
+        $('.label input[type=file]', this.d).click(function() {
+            $(this).closest('.label').find('input[type=radio]').attr('checked', true);
         });
 
         if (this.img.attr('src')) {
@@ -975,10 +1011,10 @@ elRTE.prototype.ui.prototype.buttons.wa_image = function(rte, name) {
 
             switch (name) {
                 case 'width':
-                    self.img.css('width', val);
+                    self.img.css('width', val).attr('width', val);
                     break;
                 case 'height':
-                    self.img.css('height', val);
+                    self.img.css('height', val).attr('height', val);
                     break;
                 case 'align':
                     self.img.css(val == 'left' || val == 'right' ? 'float' : 'vertical-align', val);
@@ -1009,12 +1045,81 @@ elRTE.prototype.ui.prototype.buttons.wa_image = function(rte, name) {
         this.domElem.removeClass('disabled');
         var n = this.rte.selection.getEnd(),
             $n = $(n);
-        if (n.nodeName == 'IMG' && !$n.hasClass('elrte-protected')) {
+        if (n && n.nodeName == 'IMG' && !$n.hasClass('elrte-protected')) {
             this.domElem.addClass('active');
         } else {
             this.domElem.removeClass('active');
         }
     };
 };
+elRTE.prototype.options.buttons.youtube = 'Insert YouTube video';
+elRTE.prototype.ui.prototype.buttons.youtube = function(rte, name) {
+    this.constructor.prototype.constructor.call(this, rte, name);
 
+    this.youtube_url = $('<input type="text" />').attr('name', 'youtube_url').attr('size', '40');
+    this.youtube_w = $('<input type="text" />').attr('name', 'youtube_w').attr('size', '12').val("560");
+    this.youtube_h = $('<input type="text" />').attr('name', 'youtube_h').attr('size', '12').val("315");
+    //antoinek: needs to be commented out to prevent the button to be active in fullscreen mode
+    //this.active  = true;
+    var self = this;
+
+    this.command = function() {
+
+        var d = $('<div id="elrte-hm_youtube" class="fields form"></div>')
+            .append($('<div class="field"><div class="name">'+this.rte.i18n('Youtube URL')+'</div></div>').append(
+                $('<div class="value"></div>').append(this.youtube_url)
+            ))
+            .append($('<div class="field"><div class="name">'+this.rte.i18n('Width')+'</div></div>').append(
+                $('<div class="value"></div>').append(this.youtube_w).append(' px')
+            ))
+            .append($('<div class="field"><div class="name">'+this.rte.i18n('Height')+'</div></div>').append(
+                $('<div class="value"></div>').append(this.youtube_h).append(' px')
+            ));
+
+        d.waDialog({
+            esc: true,
+            width: '400px',
+            height: '170px',
+            className: 'wa-elrte-dialog',
+            title : this.rte.i18n('Insert YouTube video'),
+            buttons: '<input type="submit" class="button green" value="' + this.rte.i18n('OK') + '"> ' + this.rte.i18n('or') + ' <a href="#" class="inline-link cancel"><b><i>' + this.rte.i18n('cancel') + '</i></b></a>',
+            onSubmit: function (d) {
+                self.set($("input[name=youtube_url]").val(), $("input[name=youtube_w]").val(),$("input[name=youtube_h]").val());
+                d.trigger('close');
+                return false;
+            }
+        });
+    }
+
+    this.update = function() {
+        this.domElem.removeClass('disabled active');
+    }
+
+    this.set = function(url, w, h) {
+        var getTubeID = function(url, gkey) {
+            var returned = null;
+            if (url.indexOf("?") != -1) {
+                var list = url.split("?")[1].split("&"),
+                    gets = [];
+
+                for (var ind in list) {
+                    var kv = list[ind].split("=");
+                    if (kv.length>0)
+                        gets[kv[0]] = kv[1];
+                }
+                returned = gets;
+
+                if (typeof gkey != "undefined")
+                    if (typeof gets[gkey] != "undefined")
+                        returned = gets[gkey];
+            }
+
+            return returned;
+        }
+
+        var toinsert = '<iframe width="'+w+'" height="'+h+'" src="http://www.youtube.com/embed/'+getTubeID(url, "v")+'?wmode=transparent" frameborder="0" allowfullscreen></iframe>';
+        this.rte.history.add();
+        this.rte.selection.insertHtml(toinsert);
+    }
+}
 })(jQuery);

@@ -12,7 +12,7 @@ class shopFrontendMyOrdersAction extends shopFrontendAction
 
         // Customer orders
         $om = new shopOrderModel();
-        $orders = $om->where('contact_id=?', $contact->getId())->fetchAll('id');
+        $orders = $om->where('contact_id=?', $contact->getId())->order('id DESC')->fetchAll('id');
 
         // Items for all orders, one query
         $im = new shopOrderItemsModel();
@@ -44,12 +44,14 @@ class shopFrontendMyOrdersAction extends shopFrontendAction
 
         $this->view->assign('orders', array_values($orders));
 
+        $this->view->assign('my_nav_selected', 'orders');
+
         // Set up layout and template from theme
         $this->setThemeTemplate('my.orders.html');
         if (!waRequest::isXMLHttpRequest()) {
             $this->setLayout(new shopFrontendLayout());
             $this->getResponse()->setTitle(_w('Orders'));
-            $this->layout->assign('breadcrumbs', self::getBreadcrumbs());
+            $this->view->assign('breadcrumbs', self::getBreadcrumbs());
             $this->layout->assign('nofollow', true);
         }
     }

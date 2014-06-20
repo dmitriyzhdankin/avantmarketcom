@@ -18,6 +18,11 @@ class photosViewHelper extends waAppViewHelper
     public function photos($hash = '', $size = null, $offset = null, $limit = null)
     {
         $size = !is_null($size) ? $size : photosPhoto::getThumbPhotoSize();
+        $sizes = array();
+        foreach (explode(',', $size) as $s) {
+            $sizes[] = 'thumb_'.trim($s);
+        }
+        $sizes = implode(',', $sizes);
         $collection = new photosCollection($hash);
         if (!$limit && $offset) {
             $limit = $offset;
@@ -27,7 +32,7 @@ class photosViewHelper extends waAppViewHelper
             $offset = 0;
             $limit = 500;
         }
-        return $collection->getPhotos("*,frontend_link,thumb_".$size, $offset, $limit, true);
+        return $collection->getPhotos("*,frontend_link,tags,".$sizes, $offset, $limit, true);
     }
 
     /**
@@ -40,7 +45,8 @@ class photosViewHelper extends waAppViewHelper
     public function photo($id, $size = null)
     {
         $id = max(1,intval($id));
-        return array_shift($this->photos("id/{$id}", $size));
+        $photos = $this->photos("id/{$id}", $size);
+        return array_shift($photos);
     }
 
     public function option($name)
@@ -51,12 +57,17 @@ class photosViewHelper extends waAppViewHelper
     /**
      *
      * Get photos albums tree
+     * @param bool $return_html
      * @return string
      */
     public function albums($return_html = true)
     {
         $album_model = new photosAlbumModel();
         $albums = $album_model->getAlbums(true);
+        foreach ($albums as &$a) {
+            $a['name'] = htmlspecialchars($a['name']);
+        }
+        unset($a);
         if ($return_html) {
             $tree = new photosViewTree($albums);
             return $tree->display('frontend');
@@ -98,6 +109,7 @@ class photosViewHelper extends waAppViewHelper
      * @param array $photo
      * @param string $size
      * @param array $attributes user-attribure, e.g. class or style
+     * @return string
      */
     public function getImgHtml($photo, $size, $attributes = array())
     {
@@ -106,5 +118,10 @@ class photosViewHelper extends waAppViewHelper
         $attributes['class'] = !empty($attributes['class']) ? $attributes['class'] : '';
         $attributes['class'] .= ' photo_img';    // !Important: obligatory class. Need in frontend JS
         return photosPhoto::getEmbedImgHtml($photo, $size, $attributes);
+    }
+    
+    public function ratingHtml($rating, $size = 10, $show_when_zero = false)
+    {
+        return photosPhoto::getRatingHtml($rating, $size, $show_when_zero);
     }
 }

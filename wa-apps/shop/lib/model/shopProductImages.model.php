@@ -13,7 +13,7 @@ class shopProductImagesModel extends waModel
     const BADGE_TYPE_BESTPRICE = 2;
     const BADGE_TYPE_CUSTOM = 100;
 
-    public function getImages($product_id, $sizes = array(), $key = 'id')
+    public function getImages($product_id, $sizes = array(), $key = 'id', $absolute = false)
     {
         if (empty($product_id)) {
             return array();
@@ -34,7 +34,7 @@ class shopProductImagesModel extends waModel
             $image['edit_datetime_ts'] = $image['edit_datetime'] ? strtotime($image['edit_datetime']) : null;
             if (!empty($sizes)) {
                 foreach ($sizes as $name => $size) {
-                    $image['url_'.$name] = shopImage::getUrl($image, $size);
+                    $image['url_'.$name] = shopImage::getUrl($image, $size, $absolute);
                 }
             }
             if ($key == 'id') {
@@ -174,5 +174,48 @@ class shopProductImagesModel extends waModel
         } else {
             return '<div class="badge" style="background-color: #a1fcff;"><span>'._w('YOUR TEXT').'</span></div>';
         }
+    }
+    
+    public function countAvailableImages()
+    {
+        if (wa()->getUser()->getRights('shop', 'type.all')) {
+            $sql = "SELECT COUNT(id) FROM `{$this->table}`";
+        } else {
+            $type_model = new shopTypeModel();
+            $types = $type_model->getTypes();
+            if (!$types) {
+                return false;
+            }
+            $sql = "SELECT COUNT(i.id) FROM `{$this->table}` i
+                JOIN `shop_products` p ON p.id = i.product_id
+                WHERE p.type IN(".array_keys($types).")";
+        }
+        return $this->query($sql)->fetchField();
+    }
+    
+    public function getAvailableImages($offset = 0, $limit = null)
+    {
+        if (!$limit) {
+            $limit = (int) $offset;
+            $offset = 0;
+        } else {
+            $offset = (int) $offset;
+            $limit = (int) $limit;
+        }
+        if (wa()->getUser()->getRights('shop', 'type.all')) {
+            $sql = "SELECT * FROM `{$this->table}` ORDER BY product_id, id LIMIT {$offset}, {$limit}";
+        } else {
+            $type_model = new shopTypeModel();
+            $types = $type_model->getTypes();
+            if (!$types) {
+                return array();
+            }
+            $sql = "SELECT i.* FROM `{$this->table}` i
+                JOIN `shop_products` p ON p.id = i.product_id
+                WHERE p.type_id IN (".array_keys($types).")
+                ORDER BY i.product_id, i.id
+                LIMIT {$offset}, {$limit}";
+        }
+        return $this->query($sql)->fetchAll('id');
     }
 }

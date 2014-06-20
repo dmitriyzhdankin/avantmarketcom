@@ -74,9 +74,20 @@ class shopWorkflowEditAction extends shopWorkflowAction
 
         $data['tax'] = $tax_included + $tax;
         $data['total'] = $subtotal + $tax + $this->price($data['shipping']) - $this->price($data['discount']);
-
+        
+        // for logging changes in stocks
+        shopProductStocksLogModel::setContext(
+                shopProductStocksLogModel::TYPE_ORDER, 
+                'Order %s was edited',
+                array(
+                    'order_id' => $data['id']
+                )
+        );
+        
         // update
         $order_model->update($data, $data['id']);
+        
+        shopProductStocksLogModel::clearContext();
 
         if (!empty($data['params'])) {
             $params_model = new shopOrderParamsModel();
@@ -93,7 +104,9 @@ class shopWorkflowEditAction extends shopWorkflowAction
 
     public function getButton()
     {
-        return '<a href="#" class="s-edit-order"><i class="icon16 edit"></i>'.$this->getName().'</a>';
+        return '<a href="#" class="s-edit-order"><i class="icon16 edit"></i><span>'.
+            $this->getName().
+        '</span><i class="icon16 loading" style="margin-left: 4px; display:none;"></i></a>';
     }
 
 }

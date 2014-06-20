@@ -2,7 +2,7 @@
 
 {if !$cart.count}
  <div class="grid_12">
-       <h1 class="page_title">Ваш заказ:</h1>
+       <h1 class="page_title">[`Shopping cart`]</h1>
     <p>[`Your shopping cart is empty.`]</p>
 </div>
 {else}
@@ -11,38 +11,30 @@
 
     <!-- general welcome text -->
  <div class="grid_12">
-       <h1 class="page_title">Ваш заказ:</h1>
+       <h1 class="page_title">[`Shopping cart`]</h1>
     
         <form method="post">
  <table class="cart_product cart">
 	      <tr>
-		     <th class="bg images" style="text-align:center;padding:5px;width:96px;"></th>
-		     <th class="name">Название</th>
-             <th class="bg edit" style="padding-left:10px;">Артикул</th>
-		     <th class="price" style="padding-right:10px;padding-left:10px;width:90px;">Розничная цена</th>
-             {if $wa->user()->getName()}<th class="bg price" style="padding-right:10px;padding-left:10px;width:80px;">Оптовая цена</th>{/if}
-		     <th class="qty" style="text-align:center;padding-left:0px;">Количество</th>
-             <th class="bg price" style="text-align:center;padding-left:0px;">Сумма</th>
-		     <th class="close" style="width:20px;padding-left:5px;"> </th>
+		     <th class="images"></th>
+		     <th class="bg name">Название</th>
+             <th class="edit"> </th>
+		     <th class="bg price">Цена товара</th>
+		     <th class="qty">Количество</th>
+		     <th class="bg price">Цена</th>
+		     <th class="close"> </th>
 	      </tr>
                 <!-- products -->
-                
                 {foreach $cart.items as $item}
-                
                     <tr data-id="{$item.id}">
-                         <td class="bg images" style="text-align:center;padding:5px;width:96px;">
-                              {$bImage =  $wa->shop->getProductImgHtml($item.product, '300x0', ['itemprop' => 'image', 'default' => "`$wa_theme_url`img/dummy96.png"])|regex_replace:'/^.+src="([^"]+)".*$/':'\1'}
-                              {$sCount = $bImage|count_characters}                    
-                              {$bImage =  $bImage|substr:1:$sCount}
-                         
-                         <a href="{$wa->getUrl('/frontend/product', ['product_url' => $item.product.url])}" title="{$item.product.name|escape}"
-                         style="display:block;width:96px;height:96px;overflow:hidden;background-image:url({$wa->url(true)}{$bImage});background-size:contain;background-position:center;background-repeat:no-repeat;" ></a></td>
+                         <td class="images">
+                         <a href="{$wa->getUrl('/frontend/product', ['product_url' => $item.product.url])}" title="{$item.product.name|escape}">
+                         {$wa->shop->productImgHtml($item.product, '96x96',['default' => "`$wa_theme_url`img/dummy96.png"])}</a></td>
                                           
-                    <td class="name">
+                    <td class="bg name">
                     <a href="{$wa->getUrl('/frontend/product', ['product_url' => $item.product.url])}" class="bold">{$item.product.name|escape}</a>
-                    <br/>{if $item.product.count lt 1}<span style="color:#F00;font-style:italic;">Товара нет в наличии на складе</span>{/if}
-                    {*$item.product.count*}{*$item.product.count - $item.quantity*}
-                    
+                            {if $item.sku_name && $item.sku_name != $item.product.name}{$item.sku_name|escape}{/if}
+                            <br />
                             {if !empty($item.services)}
                             <div class="services">
                                 {foreach $item.services as $service_id => $s}
@@ -64,24 +56,17 @@
                            </div>
                         {/if}
                         </td>
-                        <td class="bg edit" style="padding:30px 10px 0px 10px;">{$item.sku_name}</td>
-		                <td class="price" style="padding-left:10px;width:90px;">{shop_currency($item.price)}</td>
-                        {if $wa->user()->getName()} <td class="bg price" style="padding-left:10px;width:80px;">{shop_currency($item.opt_price)}</td>{/if} 
-                        <td class="qty" style="text-align:center;padding-left:0px;"><input type="text" name="quantity[{$item.id}]" value="{$item.quantity}" class="qty"></td>
-                        <td class="bg price" style="text-align:center;padding-left:0px;">
-                         {if $wa->user()->getName() && $item.opt_price neq 0}                        
-                         {shop_currency($item.opt_price * $item.quantity, $item.currency)}
-                         <br/><s style="font-size:11px;">{shop_currency($item.price * $item.quantity, $item.currency)}</s>
-                         {else}{shop_currency($item.price * $item.quantity, $item.currency)}{/if}
-                        </td>
-                        <td class="close" style="width:40px;padding-left:5px;"><a class="delete close" href="#" title="[`Remove from cart`]"></a></td>
+                        <td class="edit"> </td>
+		                <td class="bg price">{$item.price}</td>
+                        <td class="qty"><input type="text" name="quantity[{$item.id}]" value="{$item.quantity}" class="qty"></td>
+                        <td class="bg price">{$item.price * $item.quantity}</td>
+                        <td class="close"><a class="delete close" href="#" title="[`Remove from cart`]"></a></td>
                     </tr>
-                
                 {/foreach}
                 <tr>
-		     <td colspan="8" class="cart_but">
+		     <td colspan="7" class="cart_but">
 			    <button class="continue" onclick="history.go(-1);"><span>icon</span>[`Back to the store`]</button>
-			    <button class="update" onclick="history.go(0);"><span>icon</span>Обновить заказ</button>
+			    <button class="update" onclick="history.go(0);"><span>icon</span>Обновить корзину</button>
 		     </td>
 	      </tr>
        </table>
@@ -106,9 +91,9 @@
         </div><!-- .grid_4 -->
 
         <div class="grid_4">
-          <div class="bottom_block discount" >
+          <div class="bottom_block discount">
             
-             {if $discount}
+             {if 1}
               <h3>[`Discount coupon (if you have one)`]:</h3>
                <p>[`Discount`]: {shop_currency($discount, true)}</p>
                         {if shopDiscounts::isEnabled('coupons')}
@@ -137,7 +122,7 @@
           {if !empty($add_affiliate_bonus)}
           {sprintf("[`This order will add +%s points to your affiliate bonus.`]", $add_affiliate_bonus)}
           {/if}
-         <p>Точную сумму заказа Вам сообщит менеджер</p>             
+                   
            <input name="checkout" type="submit" value="[`Proceed to checkout`]" class="button large checkout"/>
             {* @event frontend_cart.%plugin_id% *}
             {foreach $frontend_cart as $_}{$_}{/foreach}  

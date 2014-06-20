@@ -13,9 +13,23 @@ class shopSettingsFollowupsAction extends waViewAction
         // Save data when POST came
         if ($id && waRequest::post()) {
             if (waRequest::post('delete')) {
-                $fm->deleteById($id);
+
+                $f = $fm->getById($id);
+                if ($f) {
+                    /**
+                     * @event followup_delete
+                     *
+                     * Notify plugins about deleted followup
+                     *
+                     * @param array[string]int $params['id'] followup_id
+                     * @return void
+                     */
+                    wa()->event('followup_delete', $f);
+                    $fm->deleteById($id);
+                }
                 exit;
             }
+
             $followup = waRequest::post('followup');
             if ($followup && is_array($followup)) {
                 $empty_row = $fm->getEmptyRow();
@@ -25,13 +39,36 @@ class shopSettingsFollowupsAction extends waViewAction
                 if (empty($followup['name'])) {
                     $followup['name'] = _w('<no name>');
                 }
-
+                
+                $followup['from']    = $followup['from'] ? $followup['from'] : null;
+                $followup['source'] = $followup['source'] ? $followup['source'] : null;
+                
+                if ($followup['from'] === 'other') {
+                    $followup['from'] = waRequest::post('from');
+                }
+                
                 if ($id && $id !== 'new') {
                     unset($followup['last_cron_time']);
                     $fm->updateById($id, $followup);
+                    $just_created = false;
                 } else {
                     $followup['last_cron_time'] = date('Y-m-d H:i:s');
                     $id = $fm->insert($followup);
+                    $just_created = true;
+                }
+
+                $f = $fm->getById($id);
+                if ($f) {
+                    $f['just_created'] = $just_created;
+
+                    /**
+                     * Notify plugins about created or modified followup
+                     * @event followup_save
+                     * @param array[string]int $params['id'] followup_id
+                     * @param array[string]bool $params['just_created']
+                     * @return void
+                     */
+                    wa()->event('followup_save', $f);
                 }
             }
         }
@@ -70,13 +107,15 @@ class shopSettingsFollowupsAction extends waViewAction
                 $o['total_formatted'] = waCurrency::format('%{s}', $o['total'], $o['currency']);
             }
         }
-
+        
         $this->view->assign('followup', $followup);
         $this->view->assign('followups', $followups);
         $this->view->assign('test_orders', $test_orders);
         $this->view->assign('last_cron', wa()->getSetting('last_followup_cli'));
         $this->view->assign('cron_ok', wa()->getSetting('last_followup_cli') + 3600*36 > time());
         $this->view->assign('cron_command', 'php '.wa()->getConfig()->getRootPath().'/cli.php shop followup');
+        $this->view->assign('default_email_from', $this->getConfig()->getGeneralSettings('email'));
+        $this->view->assign('routes', wa()->getRouting()->getByApp('shop'));
     }
 
     public static function getDefaultBody()

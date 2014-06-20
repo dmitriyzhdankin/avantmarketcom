@@ -142,6 +142,10 @@ return array(
                 'name'       => _w('GB'),
                 'multiplier' => 1000,
             ),
+            'TB'  => array(
+                'name'       => _w('TB'),
+                'multiplier' => 1000000,
+            ),
         ),
     ),
     'area' => array(
@@ -213,7 +217,15 @@ return array(
             'week' => array(
                 'name' => _w('weeks'),
                 'multiplier' => 604800
-            )
+            ),
+            'month' => array(
+                'name' => _w('months'),
+                'multiplier' => 2592000
+            ),
+            'year' => array(
+                'name' => _w('years'),
+                'multiplier' => 31536000
+            ),
         )
     )
 

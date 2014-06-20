@@ -8,12 +8,15 @@ function smarty_function_wa_pagination($params, &$smarty)
     if ($page < 1) {
         $page = 1;
     }
+    $nb = isset($params['nb']) ? $params['nb'] : 1;
+    $prev = isset($params['prev']) ? $params['prev'] : '←';
+    $next = isset($params['next']) ? $params['next'] : '→';
 
     if ($total < 2) {
         return '';
     }
 
-    $url = isset($params['url']) ? $params['url'] : '';
+    $url = isset($params['url']) ? $params['url'] : wa()->getConfig()->getRequestUrl(false, true);
 
     $html = '<ul';
     $attrs = isset($params['attrs']) ? $params['attrs'] : array();
@@ -21,22 +24,30 @@ function smarty_function_wa_pagination($params, &$smarty)
         $html .= ' '.$k.'="'.$v.'"';
     }
     $html .= '>';
+    $get_params = waRequest::get();
+    if (isset($get_params['page'])) {
+        unset($get_params['page']);
+    }
+    $url_params = http_build_query($get_params);
+    if ($page > 1 && $prev) {
+        $page_url = $url.($url && $page == 2 ? ($url_params ? '?'.$url_params : '') : '?page='.($page - 1).($url_params ? '&'.$url_params : ''));
+        $html .= '<li><a class="inline-link" href="'.$page_url.'">'.$prev.'</a></li>';
+    }
     $p = 1;
     $n = 1;
-    $nb = 1;
     while ($p <= $total) {
         if ($p > $nb && ($total - $p) > $nb && abs($page - $p) > $n && ($p < $page ? ($page - $n - $p > 1) : ($total - $nb > $p))) {
             $p = $p < $page ? $page - $n : $total - $nb + 1;
-            $html .= '<li>...</li>';
+            $html .= '<li><span>...<span></li>';
         } else {
-            $url_params = preg_replace('/&?page=[0-9]+?/i', '', waRequest::server('QUERY_STRING', ''));
-            if (substr($url_params, -1) == '&') {
-                $url_params = substr($url_params, 0, -1);
-            }
             $page_url = $url.($url && $p == 1 ? ($url_params ? '?'.$url_params : '') : '?page='.$p.($url_params ? '&'.$url_params : ''));
             $html .= '<li'.($p == $page ? ' class="selected"' : '').'><a href="'.$page_url.'">'.$p.'</a></li>';
             $p++;
         }
+    }
+    if ($page < $total && $next) {
+        $page_url = $url.'?page='.($page + 1).($url_params ? '&'.$url_params : '');
+        $html .= '<li><a class="inline-link" href="'.$page_url.'">'.$next.'</a></li>';
     }
     $html .= '</ul>';
     return $html;

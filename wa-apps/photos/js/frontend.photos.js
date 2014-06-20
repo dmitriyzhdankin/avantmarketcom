@@ -41,7 +41,13 @@ $(function() {
                                 stop();
                                 return;
                             }
+                            
+                            if ($.Retina) {
+                                list.find('#photo-list img').retina();
+                            }
+                            
                             $('#photo-list').append(list.html());
+                            $('#photo-list').trigger('append_photo_list');
                             $('.lazyloading-wrapper').show();
 
                             $.photos.onLoadData();
@@ -91,6 +97,7 @@ $(function() {
                     }
                 }
             }
+            $(window).trigger('photosLoaded');
         },
 
         shiftPhotoInStack: function f(toward, stack_nav) {
@@ -168,7 +175,11 @@ $(function() {
             replaceImg(
                 photo_img,
                 photo.thumb.url + (photo.edit_datetime ? '?' + Date.parseISO(photo.edit_datetime) : ''),
-                null
+                function() {
+                    if ($.Retina) {
+                        $(this).retina();
+                    }
+                }
             );
             
             var url = photo.full_url + 'loadPhoto?size=' + size + '&mini=1';
@@ -183,7 +194,12 @@ $(function() {
                         }
                         replaceImg(
                             photo_img,
-                            photo.thumb_custom.url + (photo.edit_datetime ? '?' + Date.parseISO(photo.edit_datetime) : '')
+                            photo.thumb_custom.url + (photo.edit_datetime ? '?' + Date.parseISO(photo.edit_datetime) : ''),
+                            function() {
+                                if ($.Retina) {
+                                    $(this).retina();
+                                }
+                            }
                         );
                     }
                     delete f.xhr;

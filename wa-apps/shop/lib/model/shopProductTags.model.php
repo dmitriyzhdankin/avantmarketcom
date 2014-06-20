@@ -6,7 +6,8 @@ class shopProductTagsModel extends waModel implements shopProductStorageInterfac
 
     /**
      * Method triggered when deleting product through shopProductModel
-     * @param array $product_ids
+     * @param int[] $product_ids
+     * @return bool
      */
     public function deleteByProducts(array $product_ids)
     {
@@ -16,11 +17,10 @@ class shopProductTagsModel extends waModel implements shopProductStorageInterfac
         foreach ($this->query("SELECT tag_id, count(product_id) cnt FROM {$this->table}
             WHERE product_id IN (".implode(',', $product_ids).")
             GROUP BY tag_id")
-            as $item)
-        {
+                 as $item) {
             $count += 1;
             $tag_model->query(
-                "UPDATE ".$tag_model->getTableName()." SET count = count - {$item['cnt']}
+                      "UPDATE ".$tag_model->getTableName()." SET count = count - {$item['cnt']}
                 WHERE id = {$item['tag_id']}"
             );
         }
@@ -28,7 +28,7 @@ class shopProductTagsModel extends waModel implements shopProductStorageInterfac
             $tag_model->query("DELETE FROM ".$tag_model->getTableName()." WHERE count <= 0");
         }
 
-        $this->deleteByField('product_id', $product_ids);
+        return $this->deleteByField('product_id', $product_ids);
     }
 
 
@@ -82,6 +82,40 @@ class shopProductTagsModel extends waModel implements shopProductStorageInterfac
         return $this->getData($product);
     }
 
+    public function addTags($product_id, $tags)
+    {
+        if (!is_array($tags)) {
+            $tags = explode(',', $tags);
+        }
+        $tag_model = new shopTagModel();
+        $tag_ids = $tag_model->getIds($tags);
+        $old_tag_ids = $this->query("SELECT tag_id FROM ".$this->table."
+            WHERE product_id = i:id", array('id' => $product_id))->fetchAll(null, true);
+        $add_tag_ids = array_diff($tag_ids, $old_tag_ids);
+        if ($add_tag_ids) {
+            $this->multipleInsert(array('product_id' => $product_id, 'tag_id' => $add_tag_ids));
+            $tag_model->incCounters($add_tag_ids);
+        }
+        return true;
+    }
+
+    public function deleteTags($product_id, $tags)
+    {
+        if (!is_array($tags)) {
+            $tags = explode(',', $tags);
+        }
+        $tag_model = new shopTagModel();
+        $tag_ids = $tag_model->getIds($tags);
+        $old_tag_ids = $this->query("SELECT tag_id FROM ".$this->table."
+            WHERE product_id = i:id", array('id' => $product_id))->fetchAll(null, true);
+        $delete_tag_ids = array_intersect($tag_ids, $old_tag_ids);
+        if ($delete_tag_ids) {
+            $this->deleteByField(array('product_id' => $product_id, 'tag_id' => $delete_tag_ids));
+            $tag_model->incCounters($delete_tag_ids, -1);
+        }
+        return true;
+    }
+
     /**
      * Tag tag of product(s)
      * @param int|array $product_id
@@ -132,7 +166,7 @@ class shopProductTagsModel extends waModel implements shopProductStorageInterfac
 
         // adding itself
         if ($add) {
-            $this->multiInsert($add);
+            $this->multipleInsert($add);
         }
 
         // recounting counters for this tags
@@ -150,7 +184,7 @@ class shopProductTagsModel extends waModel implements shopProductStorageInterfac
         if (!$product_id) {
             return false;
         }
-        $product_id = (array) $product_id;
+        $product_id = (array)$product_id;
 
         // delete tags
         $this->deleteByField(array('product_id' => $product_id, 'tag_id' => $tag_id));

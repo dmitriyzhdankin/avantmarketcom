@@ -1,0 +1,16 @@
+
+CREATE TABLE IF NOT EXISTS `shop_feature_values_color` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `feature_id` int(11) NOT NULL,
+  `sort` int(11) NOT NULL DEFAULT '0',
+  `code` mediumint(8) unsigned DEFAULT NULL,
+  `value` varchar(255) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `values` (`feature_id`,`value`)
+) ENGINE=MyISAM DEFAULT CHARSET=utf8 AUTO_INCREMENT=1 ;
+
+UPDATE photos_photo p LEFT JOIN wa_contact c ON p.contact_id = c.id 
+        SET p.contact_id = 0 
+        WHERE c.id IS NULL
+
+ALTER TABLE `photos_photo` CHANGE rate rate DECIMAL(3,2) NOT NULL DEFAULT 0

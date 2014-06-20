@@ -14,17 +14,10 @@ class shopOrderAction extends waViewAction
 
     public function execute()
     {
-        $id = waRequest::get('id');
-        if (!$id) {
-            throw new waException("Unknown order", 404);
-        }
-        $order = $this->getOrder($id);
+        $order = $this->getOrder();
         if (!$order) {
-            $id = shopHelper::decodeOrderId($id);
-            $order = $this->getOrder($id);
-            if (!$order) {
-                throw new waException("Unkown order", 404);
-            }
+            $this->view->assign('order', $order);
+            return;
         }
 
         $workflow = new shopWorkflow();
@@ -58,14 +51,24 @@ class shopOrderAction extends waViewAction
             }
         }
 
-        $order_params_model = new shopOrderParamsModel();
-        $params = $order_params_model->get($order['id']);
-
+        $params = $order['params'];
         $tracking = '';
-        if (!empty($params['shipping_id']) && !empty($params['tracking_number'])) {
+        if (!empty($params['shipping_id'])) {
             try {
                 $plugin = shopShipping::getPlugin(null, $params['shipping_id']);
-                $tracking = $plugin->tracking($params['tracking_number']);
+                if (!empty($params['tracking_number'])) {
+                    $tracking = $plugin->tracking($params['tracking_number']);
+                }
+                if ($custom_fields = $plugin->customFields(new waOrder())) {
+                    foreach ($custom_fields as $k => $v) {
+                        if (!empty($params['shipping_params_'.$k])) {
+                            $custom_fields[$k]['value'] = $params['shipping_params_'.$k];
+                        } else {
+                            unset($custom_fields[$k]);
+                        }
+                    }
+                    $this->view->assign('custom_fields', $custom_fields);
+                }
             } catch (waException $ex) {
                 $tracking = $ex->getMessage();
             }
@@ -73,8 +76,9 @@ class shopOrderAction extends waViewAction
         $this->view->assign('tracking', $tracking);
 
 
-        //$settings = wa('shop')->getConfig()->getCheckoutSettings();
-        //$form_fields = ifset($settings['contactinfo']['fields'], array());
+        $settings = wa('shop')->getConfig()->getCheckoutSettings();
+        $form_fields = ifset($settings['contactinfo']['fields'], array());
+
 
         $formatter = new waContactAddressSeveralLinesFormatter();
         $shipping_address = shopHelper::getOrderAddress($params, 'shipping');
@@ -82,10 +86,14 @@ class shopOrderAction extends waViewAction
         $shipping_address = $formatter->format(array('data' => $shipping_address));
         $shipping_address = $shipping_address['value'];
 
+
         if (isset($form_fields['address.billing'])) {
             $billing_address = shopHelper::getOrderAddress($params, 'billing');
             $billing_address = $formatter->format(array('data' => $billing_address));
             $billing_address = $billing_address['value'];
+            if ($billing_address === $shipping_address) {
+                $billing_address = null;
+            }
         } else {
             $billing_address = null;
         }
@@ -128,6 +136,37 @@ class shopOrderAction extends waViewAction
             'shipping_id'       => ifset($params['shipping_id'], '').'.'.ifset($params['shipping_rate_id'], ''),
             'offset'            => $this->getModel()->getOffset($order['id'], $this->getParams(), true)
         ));
+
+        /**
+         * Backend order profile page
+         * UI hook allow extends order profile page
+         * @event backend_order
+         * @param array $order
+         * @return array[string][string]string $return[%plugin_id%]['title_suffix'] html output
+         * @return array[string][string]string $return[%plugin_id%]['action_button'] html output
+         * @return array[string][string]string $return[%plugin_id%]['action_link'] html output
+         * @return array[string][string]string $return[%plugin_id%]['info_section'] html output
+         */
+        $this->view->assign('backend_order', wa()->event('backend_order', $order, array(
+            'title_suffix', 'action_button', 'action_link', 'info_section'
+        )));
+    }
+
+    public function getOrder()
+    {
+        $id = (int) waRequest::get('id');
+        if (!$id) {
+            return array();
+        }
+        $order = $this->_getOrder($id);
+        if (!$order) {
+            $id = shopHelper::decodeOrderId($id);
+            $order = $this->_getOrder($id);
+            if (!$order) {
+                return array();
+            }
+        }
+        return $order;
     }
 
     public function getParams($str = false)
@@ -169,7 +208,7 @@ class shopOrderAction extends waViewAction
         return $this->model;
     }
 
-    public function getOrder($id)
+    private function _getOrder($id)
     {
         $order = $this->getModel()->getOrder($id);
         if (!$order) {
@@ -179,13 +218,20 @@ class shopOrderAction extends waViewAction
         $order['state'] = $workflow->getStateById($order['state_id']);
         $order = shopHelper::workupOrders($order, true);
 
-        // extend items by stocks
+        $sku_ids = array();
         $stock_ids = array();
         foreach ($order['items'] as $item) {
             if ($item['stock_id']) {
                 $stock_ids[] = $item['stock_id'];
             }
+            if ($item['sku_id']) {
+                $sku_ids[] = $item['sku_id'];
+            }
         }
+        $sku_ids = array_unique($sku_ids);
+        $stock_ids = array_unique($stock_ids);
+        
+        // extend items by stocks
         $stocks = $this->getStocks($stock_ids);
         foreach ($order['items'] as &$item) {
             if (!empty($stocks[$item['stock_id']])) {
@@ -194,16 +240,60 @@ class shopOrderAction extends waViewAction
         }
         unset($item);
 
+        $skus = $this->getSkus($sku_ids);
+        $sku_stocks = $this->getSkuStocks($sku_ids);
+        
+        foreach ($order['items'] as &$item) {
+            // product and existing sku
+            if (isset($skus[$item['sku_id']])) {
+                $s = $skus[$item['sku_id']];
+                
+                // for that counts that lower than low_count-thresholds show icon
+                
+                if ($s['count'] !== null) {
+                    if (isset($item['stock'])) {
+                        if (isset($sku_stocks[$s['id']][$item['stock']['id']])) {
+                            $count = $sku_stocks[$s['id']][$item['stock']['id']]['count'];
+                            if ($count <= $item['stock']['low_count']) {
+                                $item['stock_icon'] = shopHelper::getStockCountIcon($count, $item['stock']['id'], true);
+                            }
+                        }
+                    } else if ($s['count'] <= shopStockModel::LOW_DEFAULT) {
+                        $item['stock_icon'] = shopHelper::getStockCountIcon($s['count'], null, true);
+                    }
+                }
+            }
+        }
+        unset($item);
+
         return $order;
 
     }
-
+    
+    public function getSkus($sku_ids)
+    {
+        if (!$sku_ids) {
+            return array();
+        }
+        $model = new shopProductSkusModel();
+        return $model->getByField('id', $sku_ids, 'id');
+    }
+    
     public function getStocks($stock_ids)
     {
         if (!$stock_ids) {
             return array();
         }
         $model = new shopStockModel();
-        return $model->getById($stock_ids, 'id');
+        return $model->getById($stock_ids);
+    }
+    
+    public function getSkuStocks($sku_ids)
+    {
+        if (!$sku_ids) {
+            return array();
+        }
+        $model = new shopProductStocksModel();
+        return $model->getBySkuId($sku_ids);
     }
 }

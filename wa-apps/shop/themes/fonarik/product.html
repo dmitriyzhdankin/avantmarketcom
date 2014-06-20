@@ -5,7 +5,7 @@
 <nav class="left_menu">
 <ul class="menu-h">
     <li class="current"><a href="{$wa->getUrl('/frontend/product', ['product_url' => $product.url])}">[`Overview`]</a></li>
-    <!--<li><a href="{$wa->shop->productUrl($product, 'reviews')}">[`Reviews`]</a> <span class="hint" itemprop="reviewCount">{count($product.reviews)}</span></li>-->
+    <li><a href="{$wa->shop->productUrl($product, 'reviews')}">[`Reviews`]</a> <span class="hint" itemprop="reviewCount">{count($product.reviews)}</span></li>
     {foreach $product.pages as $p}
     <li{if $page.id == $p.id} class="current"{/if}><a href="{$wa->shop->productUrl($product, 'page', ['page_url' => $p.url])}">{$p.name|escape}</a></li>
     {/foreach}
@@ -24,14 +24,16 @@
        {if $product.images} <!-- image gallery -->
        <div class="grid_4 img_slid" id="products">
             <!-- main image -->
-            <div class="image" style="height:auto;">
+            <div class="image">
                             
                     {$wa->shop->getImageBadgeHtml($product.images[$product.image_id])}
-               {$bigImage =  $wa->shop->getProductImgHtml($product, '750x0')|regex_replace:'/^.+src="([^"]+)".*$/':'\1'}                
-               <div class="preview slides_container" style="height:auto;">
-                       <a href="{$bigImage}" rel='gal1' title="" id="productBigImage" class="highslide" onclick="return hs.expand(this, galleryOptions)">
-							<img src="{$bigImage}" width="295"/>
+                    {$bigImage =  $wa->shop->getProductImgHtml($product, '750x0')|regex_replace:'/^.+src="([^"]+)".*$/':'\1'}                
+               <div class="preview slides_container">
+					<div class="prev_bg">
+                       <a href="{$bigImage}" class="jqzoom" rel='gal1' title="">
+							{$wa->shop->getProductImgHtml($product, '200x200', ['itemprop' => 'image', 'id' => 'product-image', 'title' => $product.name|escape|cat:' ':strip_tags($product.summary)|escape])}
 						</a>
+					</div>
 				</div>
             </div>
             <!-- gallery -->
@@ -39,10 +41,8 @@
                 <ul class="pagination clearfix" id="thumblist">&
                     {foreach $product.images as $image}       
                     {$bImage =  $wa->shop->getProductImgHtml(['id'=> $product.id, 'image_id' => $image.id, 'ext' => $image.ext], '750x0')|regex_replace:'/^.+src="([^"]+)".*$/':'\1'}
-                    {$sCount = $bImage|count_characters}                    
-                    {$bImage =  $bImage|substr:1:$sCount}            
-                    <li><a href="{$wa->url(true)}{$bImage}" class="highslide"
-                     onclick="return hs.expand(this, galleryOptions)">
+                                    
+                    <li><a href='javascript:void(0);' rel="&#123;gallery: 'gal1', smallimage: '{$wa->url(true)}{$bImage}',largeimage: '{$wa->url(true)}{$bImage}'&#125;">
                     {$wa->shop->getProductImgHtml(['id'=> $product.id, 'image_id' => $image.id, 'ext' => $image.ext], '96x96', ['itemprop' => 'image'])} 
                      </a></li>
                     {/foreach}
@@ -70,7 +70,7 @@
             {/if}
         
         
-       
+        <form method="post" action="{$wa->getUrl('/frontendCart/add')}">
             
             <div class="grid_5">
 			<div class="entry_content">
@@ -201,7 +201,7 @@
                 {$product_available = ($sku.available and $sku.count !== 0)}
             {/if}
             
-            <div class="ava_price" style="padding-top:5px;height:70px;">
+            <div class="ava_price">
 				<div class="availability_sku">
                         
 <!-- sku -->
@@ -268,7 +268,6 @@
             {else}
                 {* in case there is only one sku, don't display the selector *}
                 {$sku = $product.skus[$product.sku_id]}
-                
                 {$product_available = ($sku.available and $sku.count !== 0)}
                 {if !$product_available}
                      <link itemprop="availability" href="http://schema.org/OutOfStock" />
@@ -281,39 +280,24 @@
 
             {/if}
            
- </div>       
-              
+ </div>                       
                         
-							<div class="availability" >
-								Наличие на складах:<br/>
-  {foreach $sku.stock key=sid item=quantity}
-   {foreach $stocks item=stock}
-   {if $stock.id eq $sid}{$stock.name}: <b>
-   {if $quantity lt 1} нет
-   {elseif $quantity ge 1 and $quantity lte $stock.critical_count} мало
-   {elseif $quantity gt $stock.critical_count and $quantity lte $stock.low_count} средне
-   {elseif $quantity gt $stock.low_count} много
-   {/if}</b>{/if}
-   {/foreach}
-    <br/>
-  {/foreach}
+							<div class="availability">
+								Наличие:{if $product_available}
+                                 <link itemprop="availability" href="http://schema.org/InStock" />
+                                <span>Есть на складе</span>{else} 
+                                <link itemprop="availability" href="http://schema.org/OutOfStock" />
+                                <em class="bold out-of-stock nowrap" style="color:#F00;">[`Out of stock`]</em>{/if}
 							</div>
-							
+							<div class="sku">
+								Артикул: <span>{$sku.sku}</span>
+							</div>
 						</div><!-- .availability_sku -->
 
 						<div class="price">
-                        
-                  {if $wa->user()->getName() and $sku.purchase_price gt 0}
-                  <div class="price_new">{shop_currency($sku.purchase_price)}</div><div class="price_old">{shop_currency($product.price)}</div>
-                 {else}<div class="price_new">{shop_currency($product.price)}</div><div class="price_old"></div>{/if}
-                 
-                           
-                            
-                            <div class="sku" style="color:#000;font-weight:normal;font-size:12px;">
-								Артикул: <span>{$sku.sku}</span>
-							</div>
+							<div class="price_new">{shop_currency($product.price|ceil)}</div>
+							<div class="price_old"></div>
 						</div><!-- .price -->
-
 					</div><!-- .ava_price -->
 
             <div class="block_cart">            
@@ -326,19 +310,16 @@
 				<!--<div class="like"><a href="#" class="like">Add to Wishlist</a></div>-->
 			</div>
             <div class="cart">
-             <form method="post" action="{$wa->getUrl('/frontendCart/add')}">
-             <input type="hidden" name="product_id" value="{$product.id}">
-            <input type="submit" value="Заказать" {if $product.price eq 0 }disabled="disabled" style="background:#CCC;"{/if} class="bay"/>               
-             <input type="text" name="quantity" class="number" value="1">                
+            <input type="submit" {if !$product_available}disabled="disabled"{/if} value="Купить" class="bay"/>               
+                <input type="text" name="quantity" class="number" value="1">                
                 <span>Количество:</span>
-             </form>
             </div>
             <div class="clear"></div>
             </div>
 
             </div>
            </div> 
-       
+        </form>
     
         
     
@@ -349,7 +330,7 @@
 		<div id="wrapper_tab" class="tab1">
 					<a href="#" class="tab1 tab_link">Описание</a>
                     <a href="#" class="tab2 tab_link">Характеристики</a>
-					<!--<a href="#" class="tab3 tab_link">Отзывы {if $reviews_total_count}({$reviews_total_count}){/if}</a>-->
+					<a href="#" class="tab3 tab_link">Отзывы {if $reviews_total_count}({$reviews_total_count}){/if}</a>
                     <a href="#" class="tab4 tab_link">Всё</a>
         <div class="clear"></div>
 
@@ -381,7 +362,7 @@
         </div>
         
         <div class="tab3 tab_body">
-        <!--<div class="reviews">
+        <div class="reviews">
             <h4>{sprintf('[`%s reviews`]', $product.name)}</h4>
             <ul class="comments">
                 {foreach $reviews as $review}
@@ -397,7 +378,7 @@
         {else}
             {sprintf('[`Read <a href="%s">all %d reviews</a> on %s`]', 'reviews/', $reviews_total_count, $product.name)}
         {/if}
-      -->
+      
       </div>
         
         

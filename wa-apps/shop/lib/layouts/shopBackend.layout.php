@@ -3,6 +3,16 @@ class shopBackendLayout extends waLayout
 {
     public function execute()
     {
+
+        $app_settings_model = new waAppSettingsModel();
+        if ($app_settings_model->get('shop', 'welcome')) {
+            if (waRequest::get('skipwelcome')) {
+                $app_settings_model->del('shop', 'welcome');
+            } else {
+                $this->redirect(wa()->getConfig()->getBackendUrl(true).'shop/?action=welcome');
+            }
+        }
+
         $user = wa()->getUser();
         $product_rights = $user->isAdmin('shop') || wa()->getUser()->getRights('shop', 'type.%');
 
@@ -10,11 +20,13 @@ class shopBackendLayout extends waLayout
             $default_page = 'orders';
         } else if ($product_rights) {
             $default_page = 'products';
+        } else if (wa()->getUser()->getRights('shop', 'design') || wa()->getUser()->getRights('shop', 'pages')) {
+            $default_page = 'storefronts';
+        } else if (wa()->getUser()->getRights('shop', 'reports')) {
+            $default_page = 'reports';
+        } else if (wa()->getUser()->getRights('shop', 'settings')) {
+            $default_page = 'settings';
         } else {
-            $default_page = null;
-        }
-
-        if (!$default_page) {
             throw new waRightsException(_w("Access denied"));
         }
 

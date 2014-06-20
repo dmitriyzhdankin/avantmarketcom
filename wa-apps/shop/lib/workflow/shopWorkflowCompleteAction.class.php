@@ -9,13 +9,18 @@ class shopWorkflowCompleteAction extends shopWorkflowAction
         if ($order['paid_year']) {
             return true;
         } else {
+            if (wa('shop')->getConfig()->getOption('order_paid_date') == 'create') {
+                $time = strtotime($order['create_datetime']);
+            } else {
+                $time = time();
+            }
             shopAffiliate::applyBonus($order_id);
             $result = array(
                 'update' => array(
-                    'paid_year' => date('Y'),
-                    'paid_quarter' => floor((date('n') - 1) / 3) + 1,
-                    'paid_month' => date('n'),
-                    'paid_date' => date('Y-m-d'),
+                    'paid_year' => date('Y', $time),
+                    'paid_quarter' => floor((date('n', $time) - 1) / 3) + 1,
+                    'paid_month' => date('n', $time),
+                    'paid_date' => date('Y-m-d', $time),
                 )
             );
             if (!$order_model->where("contact_id = ? AND paid_date IS NOT NULL", $order['contact_id'])->limit(1)->fetch()) {
@@ -27,7 +32,7 @@ class shopWorkflowCompleteAction extends shopWorkflowAction
 
     public function postExecute($order_id = null, $result = null)
     {
-        parent::postExecute($order_id, $result);
+        $data = parent::postExecute($order_id, $result);
 
         $order_model = new shopOrderModel();
         if (is_array($order_id)) {
@@ -47,12 +52,25 @@ class shopWorkflowCompleteAction extends shopWorkflowAction
             $update_on_create   = $app_settings_model->get('shop', 'update_stock_count_on_create_order');
 
             if (!$update_on_create && $state_id == 'new') {
-                // jump through 'processing' state - reduct
+                // jump through 'processing' state - reduce
+                
+                // for logging changes in stocks
+                shopProductStocksLogModel::setContext(
+                        shopProductStocksLogModel::TYPE_ORDER,
+                        'Order %s was completed',
+                        array(
+                            'order_id' => $order_id
+                        )
+                );
+                
                 $order_model = new shopOrderModel();
                 $order_model->reduceProductsFromStocks($order_id);
+                
+                shopProductStocksLogModel::clearContext();
             }
 
             $order_model->recalculateProductsTotalSales($order_id);
         }
+        return $data;
     }
 }

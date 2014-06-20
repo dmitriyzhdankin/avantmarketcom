@@ -6,5 +6,7 @@ return array (
   'migrate' => true,
   'cml1c' => true,
   'favoriteproducts' => true,
+  'custommenu' => true,
+  'custom' => true,
 );
 //EOF

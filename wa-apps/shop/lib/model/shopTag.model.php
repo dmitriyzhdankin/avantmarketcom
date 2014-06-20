@@ -9,9 +9,14 @@ class shopTagModel extends waModel
     const CLOUD_MAX_OPACITY = 100;
     const CLOUD_MIN_OPACITY = 30;
 
-    public function getCloud($key = null)
+    public function getCloud($key = null, $limit = 0)
     {
-        $tags = $this->where('count > 0')->fetchAll($key);
+        $query = $this->where('count > 0');
+        if ($limit) {
+            $query->order('count DESC');
+            $query->limit((int)$limit);
+        }
+        $tags = $query->fetchAll($key);
         if (!empty($tags)) {
             $first = current($tags);
             $max_count = $min_count = $first['count'];
@@ -30,7 +35,13 @@ class shopTagModel extends waModel
             foreach ($tags as &$tag) {
                 $tag['size'] = ceil(self::CLOUD_MIN_SIZE + ($tag['count'] - $min_count) * $step_size);
                 $tag['opacity'] = number_format((self::CLOUD_MIN_OPACITY + ($tag['count'] - $min_count) * $step_opacity) / 100, 2, '.', '');
-                $tag['uri_name'] = urlencode($tag['name']);
+                if (strpos($tag['name'], '/') !== false) {
+                    $tag['uri_name'] = explode('/', $tag['name']);
+                    $tag['uri_name'] = array_map('urlencode', $tag['uri_name']);
+                    $tag['uri_name'] = implode('/', $tag['uri_name']);
+                } else {
+                    $tag['uri_name'] = urlencode($tag['name']);
+                }
             }
             unset($tag);
         }
@@ -111,4 +122,10 @@ class shopTagModel extends waModel
 
         return $this->exec($sql);
     }
+    
+    public function popularTags($limit = 10)
+    {
+        return $this->select('*')->order('count DESC')->limit($limit)->fetchAll();
+    }
+    
 }

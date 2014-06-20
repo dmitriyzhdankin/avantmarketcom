@@ -20,9 +20,14 @@ class shopOrdersGetProductController extends waJsonController
 
         $sku_id = waRequest::get('sku_id', 0, waRequest::TYPE_INT);
         if ($sku_id) {
-            $this->response = $this->getSku($sku_id, $order_id);
+            $sku = $this->getSku($sku_id, $order_id);
+            $this->response['sku'] = $sku;
+            $this->response['service_ids'] = array_keys($sku['services']);
         } else {
-            $this->response = $this->getProduct($product_id, $order_id);
+            $product = $this->getProduct($product_id, $order_id);
+            $this->response['product'] = $product;
+            $this->response['sku_ids'] = array_keys($product['skus']);
+            $this->response['service_ids'] = array_keys($product['services']);
         }
     }
 
@@ -59,28 +64,40 @@ class shopOrdersGetProductController extends waJsonController
                 $this->getConfig()->getImageSize('crop_small')
             );
         }
+        // aggregated stocks count icon for product
         $product['icon'] = shopHelper::getStockCountIcon($product['count'], null, true);
         foreach ($product['skus'] as &$sku) {
-            if (empty($sku_stocks[$sku['id']])) {
-                $sku['icon'] = shopHelper::getStockCountIcon($sku['count'], null, true);
-            } else {
-                $icons = array();
-                foreach ($sku_stocks[$sku['id']] as $stock_id => $stock) {
-                    $icon  = &$icons[];
-                    $icon  = shopHelper::getStockCountIcon($stock['count'], $stock_id)." ";
-                    $icon .= $stock['count']." ";
-                    $icon .= "@".htmlspecialchars($stock['name']);
-                    unset($icon);
-                }
-                $sku['icon'] = implode(', ', $icons);
-            }
+            $this->workupSku($sku, $sku_stocks);
         }
         unset($sku);
     }
 
+    private function workupSku(&$sku, $sku_stocks)
+    {
+        // detaled stocks count icon for sku
+        if (empty($sku_stocks[$sku['id']])) {
+            $sku['icon'] = shopHelper::getStockCountIcon($sku['count'], null, true);
+        } else {
+            $icons = array();
+            foreach ($sku_stocks[$sku['id']] as $stock_id => $stock) {
+                $icon  = &$icons[$stock_id];
+                $icon  = shopHelper::getStockCountIcon($stock['count'], $stock_id)." ";
+                $icon .= $stock['count']." ";
+                $icon .= "<span class='small'>@".htmlspecialchars($stock['name'])."</span>";
+                unset($icon);
+            }
+//             $sku['icon'] = implode(', ', $icons);
+            $sku['icon'] = shopHelper::getStockCountIcon($sku['count'], null, true);
+            $sku['icons'] = $icons;
+        }
+    }
+
     public function getSku($sku_id, $order_id)
     {
-        return $this->getModel()->getSku($sku_id, $order_id);
+        $sku = $this->getModel()->getSku($sku_id, $order_id);
+        $sku_stocks = $this->getSkuStocks(array($sku_id));
+        $this->workupSku($sku, $sku_stocks);
+        return $sku;
     }
 
     /**

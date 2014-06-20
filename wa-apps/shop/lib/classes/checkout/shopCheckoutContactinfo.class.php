@@ -16,6 +16,13 @@ class shopCheckoutContactinfo extends shopCheckout
         $contact = $this->getContact();
         if ($contact) {
             $this->form->setValue($contact);
+
+            // Make sure there are no more than one address of each type in the form
+            foreach(array('address', 'address.shipping', 'address.billing') as $fld) {
+                if (isset($this->form->values[$fld]) && count($this->form->values[$fld]) > 1) {
+                    $this->form->values[$fld] = array(reset($this->form->values[$fld]));
+                }
+            }
         }
         $view = wa()->getView();
         $view->assign('checkout_contact_form', $this->form);
@@ -23,6 +30,18 @@ class shopCheckoutContactinfo extends shopCheckout
         if (!$view->getVars('error')) {
             $view->assign('error', array());
         }
+        
+        $checkout_flow = new shopCheckoutFlowModel();
+        $step_number = shopCheckout::getStepNumber('contactinfo');
+        // IF no errors 
+        $checkout_flow->add(array(
+            'step' => $step_number
+        ));
+        // ELSE
+//        $checkout_flow->add(array(
+//            'step' => $step_number,
+//            'description' => ERROR MESSAGE HERE
+//        ));
     }
 
     public function validate()
@@ -37,12 +56,6 @@ class shopCheckoutContactinfo extends shopCheckout
      */
     public function execute()
     {
-        if (waRequest::post('wa_auth_login')) {
-            $login_action = new shopLoginAction();
-            $login_action->run();
-            return;
-        }
-
         $contact = $this->getContact();
         if (!$contact) {
             $contact = new waContact();
@@ -60,12 +73,38 @@ class shopCheckoutContactinfo extends shopCheckout
             }
         }
 
+        if ($shipping = $this->getSessionData('shipping') && !waRequest::post('ignore_shipping_error')) {
+            $shipping_step = new shopCheckoutShipping();
+            $rate = $shipping_step->getRate($shipping['id'], isset($shipping['rate_id']) ? $shipping['rate_id'] : null, $contact);
+            if (!$rate || is_string($rate)) {
+                // remove selected shipping method
+                $this->setSessionData('shipping', null);
+                /*
+                $errors = array();
+                $errors['all'] = sprintf(_w('We cannot ship to the specified address via %s.'), $shipping['name']);
+                if ($rate) {
+                    $errors['all'] .= '<br> <strong>'.$rate.'</strong><br>';
+                }
+                $errors['all'] .= '<br> '._w('Please double-check the address above, or return to the shipping step and select another shipping option.');
+                $errors['all'] .= '<input type="hidden" name="ignore_shipping_error" value="1">';
+                wa()->getView()->assign('errors', $errors);
+                return false;
+                */
+            }
+        }
+
         if (wa()->getUser()->isAuth()) {
             $contact->save();
         } else {
             $errors = array();
             if (waRequest::post('create_user')) {
                 $login = waRequest::post('login');
+                if (!$login) {
+                    $errors['email'][] = _ws('Required');
+                }
+                if (!waRequest::post('password')) {
+                    $errors['password'] = _ws('Required');
+                }
                 $email_validator = new waEmailValidator();
                 if (!$email_validator->isValid($login)) {
                     $errors['email'] = $email_validator->getErrors();
@@ -133,10 +172,10 @@ class shopCheckoutContactinfo extends shopCheckout
                     continue;
                 }
 
-                // Copy settings if subfield is turned on or required
+                // Copy settings if subfield is turned on, or required, or is hidden
                 $fields = array();
                 foreach($options['address']['fields'] as $sf_id => $sf_opts) {
-                    if (!empty($sf_opts['required']) || !empty($opts['fields'][$sf_id])) {
+                    if (!empty($sf_opts['required']) || ( !empty($sf_opts['_disabled']) && !empty($sf_opts['_default_value_enabled']) && empty($sf_opts['_deleted']) ) || !empty($opts['fields'][$sf_id])) {
                         $fields[$sf_id] = $sf_opts;
                     }
                 }
@@ -180,6 +219,7 @@ class shopCheckoutContactinfo extends shopCheckout
                     $fields_unsorted[$field->getId()] = $field;
                 } else if ($sys_opts) {
                     waContactFields::updateField($field);
+                    waContactFields::enableField($field, 'person');
                 }
             }
             $config['fields'][$fld_id] = $local_opts;
@@ -245,24 +285,59 @@ class shopCheckoutContactinfo extends shopCheckout
      */
     protected static function tidyOpts($field, $fld_id, $opts)
     {
-        if ($fld_id == '%FID%' || !is_array($opts) || !empty($opts['_disabled']) || !empty($opts['_deleted']) || empty($opts['localized_names'])) {
+        if ($fld_id == '%FID%' || !is_array($opts) || !empty($opts['_deleted']) || empty($opts['localized_names'])) {
             return array(null, null);
         }
-        unset($opts['_disabled'], $opts['_type'], $opts['_deleted']);
+        if (!empty($opts['_disabled'])) {
+            if (!empty($opts['_default_value_enabled']) && isset($opts['_default_value']) && strlen($opts['_default_value'])) {
+
+                // A hack for region field: when user specifies region name, replace it with region code.
+                // In case there's a region with code equal to another region's name, prefer the former.
+                if ($field instanceof waContactRegionField) {
+                    $rm = new waRegionModel();
+                    $regions = $rm->select('code, code AS a')->where('code = s:0 OR name = s:0', $opts['_default_value'])->query()->fetchAll('code', true);
+                    if ($regions && empty($regions[$opts['_default_value']])) {
+                        $opts['_default_value'] = reset($regions);
+                    }
+                }
+
+                return array(
+                    array(
+                        'hidden' => true,
+                        'value' => $opts['_default_value'],
+                    ),
+                    array()
+                );
+            } else {
+                return array(null, null);
+            }
+        }
+        unset($opts['_disabled'], $opts['_type'], $opts['_deleted'], $opts['_default_value'], $opts['_default_value_enabled']);
 
         $sys_opts = array();
 
-        if (in_array(get_class($field), array('waContactSelectField', 'waContactRadioSelectField', 'waContactChecklistField'))) {
+        if (in_array(get_class($field), array('waContactSelectField', 'waContactRadioSelectField', 'waContactChecklistField', 'waContactBranchField'))) {
             if (!empty($opts['options']) && is_array($opts['options'])) {
+
+                if ($field instanceof waContactBranchField) {
+                    if (empty($opts['hide']) || !is_array($opts['hide'])) {
+                        $opts['hide'] = array();
+                    }
+                }
+
                 // get rid of empty last element
                 if ( ( $el = trim(array_pop($opts['options'])))) {
                     $opts['options'][] = $el;
                 }
 
+                $branch_hide = array();
                 $select_options = array();
-                foreach($opts['options'] as $v) {
+                foreach($opts['options'] as $i => $v) {
                     $v = trim($v);
                     $select_options[$v] = $v;
+                    if ($field instanceof waContactBranchField && !empty($opts['hide'][$i])) {
+                        $branch_hide[$v] = explode(',', (string) $opts['hide'][$i]);
+                    }
                 }
 
                 if (!$select_options) {
@@ -270,6 +345,9 @@ class shopCheckoutContactinfo extends shopCheckout
                 }
 
                 $sys_opts['options'] = $select_options;
+                if ($field instanceof waContactBranchField) {
+                    $sys_opts['hide'] = $branch_hide;
+                }
             } else {
                 if (!$field->getParameter('options')) {
                     // Never allow select-based field with no options to select from
@@ -331,6 +409,11 @@ class shopCheckoutContactinfo extends shopCheckout
         if ($field->getParameter('app_id') == 'shop') {
             $sys_opts += $opts;
             $opts = array();
+            foreach(waContactFields::$customParameters as $k => $v) {
+                if (isset($sys_opts[$k])) {
+                    $opts[$k] = $sys_opts[$k];
+                }
+            }
         }
         if (empty($opts) && $opts !== null) {
             $opts = array('__dummy__' => 1);

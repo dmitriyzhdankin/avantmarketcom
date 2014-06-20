@@ -2,6 +2,7 @@
 class shopPayment extends waAppPayment
 {
     private static $instance;
+
     public static function getInstance()
     {
         if (!isset(self::$instance)) {
@@ -76,6 +77,10 @@ class shopPayment extends waAppPayment
 
     public static function savePlugin($plugin)
     {
+        $default = array(
+            'status' => 0,
+        );
+        $plugin = array_merge($default, $plugin);
         $model = new shopPluginModel();
         if (!empty($plugin['id']) && ($id = max(0, intval($plugin['id']))) && ($row = $model->getByField(array('id' => $id, 'type' => shopPluginModel::TYPE_PAYMENT)))) {
             $plugin['plugin'] = $row['plugin'];
@@ -89,7 +94,7 @@ class shopPayment extends waAppPayment
         }
         if (!empty($plugin['id'])) {
             $shipping = ifset($plugin['shipping'], array());
-            $plugins = $model->listPlugins(shopPluginModel::TYPE_SHIPPING);
+            $plugins = $model->listPlugins(shopPluginModel::TYPE_SHIPPING, array('all' => true,));
             $app_settings = new waAppSettingsModel();
             $settings = json_decode($app_settings->get('shop', 'shipping_payment_disabled', '{}'), true);
             if (empty($settings) || !is_array($settings)) {
@@ -102,9 +107,16 @@ class shopPayment extends waAppPayment
             foreach ($plugins as $item) {
                 if (empty($plugin['shipping'][$item['id']])) {
                     $s[] = $item['id'];
+                } else {
+                    $key = array_search($item['id'], $s);
+                    if ($key !== false) {
+                        unset($s[$key]);
+                    }
                 }
             }
+
             $s = array_unique($s);
+
             if (empty($s)) {
                 unset($settings[$plugin['id']]);
             }
@@ -124,6 +136,7 @@ class shopPayment extends waAppPayment
      * formalize order data
      * @param string|array $order order ID or order data
      * @param waPayment $payment_plugin
+     * @return waOrder
      */
     public static function getOrderData($order = array(), $payment_plugin = null)
     {
@@ -157,7 +170,7 @@ class shopPayment extends waAppPayment
             $total = $order['total'];
             $currency_id = $order['currency'];
             if ($currency !== true) {
-                $currency = (array) $currency;
+                $currency = (array)$currency;
                 if (!in_array($order['currency'], $currency)) {
                     $convert = true;
                     $total = shop_currency($total, $order['currency'], $currency_id = reset($currency), false);
@@ -176,6 +189,7 @@ class shopPayment extends waAppPayment
                 $items[] = array(
                     'id'          => ifset($item['id']),
                     'name'        => ifset($item['name']),
+                    'sku'        => ifset($item['sku_code']),
                     'description' => '',
                     'price'       => $item['price'],
                     'quantity'    => ifset($item['quantity'], 0),
@@ -184,11 +198,11 @@ class shopPayment extends waAppPayment
                     'type'        => ifset($item['type'], 'product'),
                     'product_id'  => ifset($item['product_id']),
                 );
+                if (isset($item['weight'])) {
+                    $items[count($items) - 1]['weight'] = $item['weight'];
+                }
             }
         }
-
-        $settings = wa('shop')->getConfig()->getCheckoutSettings();
-        $form_fields = ifset($settings['contactinfo']['fields'], array());
 
         $empty_address = array(
             'firstname' => '',
@@ -200,17 +214,12 @@ class shopPayment extends waAppPayment
             'zip'       => '',
         );
 
-        if (isset($form_fields['address.shipping'])) {
-            $shipping_address = array_merge($empty_address, shopHelper::getOrderAddress($order['params'], 'shipping'));
-        } else {
-            $shipping_address = $empty_address;
+        $shipping_address = array_merge($empty_address, shopHelper::getOrderAddress($order['params'], 'shipping'));
+        $billing_address = array_merge($empty_address, shopHelper::getOrderAddress($order['params'], 'billing'));
+        if (!count(array_filter($billing_address, 'strlen'))) {
+            $billing_address = $shipping_address;
         }
 
-        if (isset($form_fields['address.billing'])) {
-            $billing_address = array_merge($empty_address, shopHelper::getOrderAddress($order['params'], 'billing'));
-        } else {
-            $billing_address = $empty_address;
-        }
         ifset($order['shipping'], 0.0);
         ifset($order['discount'], 0.0);
         ifset($order['tax'], 0.0);
@@ -241,6 +250,13 @@ class shopPayment extends waAppPayment
             'params'           => $order['params'],
         ));
         return $wa_order;
+    }
+
+    public function getDataPath($order_id, $path = null)
+    {
+        $str = str_pad($order_id, 4, '0', STR_PAD_LEFT);
+        $path = 'orders/'.substr($str, -2).'/'.substr($str, -4, 2).'/'.$order_id.'/payment/'.$path;
+        return wa('shop')->getDataPath($path, false, 'shop');
     }
 
     public function getSettings($payment_id, $merchant_key)
@@ -296,96 +312,142 @@ class shopPayment extends waAppPayment
                 ifempty($transaction_data['printform'], 0);
                 $params = array(
                     'id'        => $transaction_data['order_id'],
+                    'code'      => waRequest::param('code'),
                     'form_type' => 'payment',
                     'form_id'   => ifempty($transaction_data['printform'], 'payment'),
                 );
-                $url = wa()->getRouteUrl('shop/frontend/myOrderPrintform', $params, true);
+
+                if (empty($params['code'])) {
+                    unset($params['code']);
+                }
+                    $action = 'shop/frontend/myOrderPrintform';
+
+                $url = wa()->getRouteUrl($action, $params, true);
                 break;
-            case self::URL_DECLINE:
-                break;
+
             case self::URL_SUCCESS:
+                $url = wa()->getRouteUrl('shop/frontend/checkout', array('step' => 'success'), true);
+                if (!empty($transaction_data['order_id'])) {
+                    $url .= '?order_id='.$transaction_data['order_id'];
+                }
+                break;
             case self::URL_FAIL:
-                $url = wa()->getRouteUrl('shop/frontend/checkout', array('step' => $type), true);
+            case self::URL_DECLINE:
+                $url = wa()->getRouteUrl('shop/frontend/checkout', array('step' => 'error'), true);
+                if (!empty($transaction_data['order_id'])) {
+                    $url .= '?order_id='.$transaction_data['order_id'];
+                }
                 break;
         }
         return $url;
     }
 
+
+    protected function workflowAction($method, $transaction_data)
+    {
+        $order_model = new shopOrderModel();
+        $order = $order_model->getById($transaction_data['order_id']);
+        if (!$order) {
+            return array('error' => 'Order not found');
+        }
+        $result = array();
+        if (empty($transaction_data['customer_id'])) {
+            $result['customer_id'] = $order['contact_id'];
+        }
+        $workflow = new shopWorkflow();
+        $workflow->getActionById($method)->run($transaction_data);
+
+        return $result;
+    }
+
     /**
-     *
-     *
-     * @param array $wa_transaction_data
-     * @return array|null
+     * @param array $transaction_data
+     * @return array
      */
     public function callbackPaymentHandler($transaction_data)
     {
-        $workflow = new shopWorkflow();
-        return $workflow->getActionById('pay')->run($transaction_data);
+        $result = $this->workflowAction('callback', $transaction_data);
+        if (empty($result['error'])) {
+            $workflow = new shopWorkflow();
+            $workflow->getActionById('pay')->run($transaction_data['order_id']);
+        }
+        return $result;
     }
 
     /**
-     *
-     *
-     * @param array $wa_transaction_data
-     * @return array|null
+     * @param array $transaction_data
+     * @return array
      */
-    public function callbackCancelHandler($wa_transaction_data)
+    public function callbackCancelHandler($transaction_data)
     {
-        return null;
+        return $this->workflowAction('callback', $transaction_data);
     }
 
     /**
-     *
-     *
-     * @param array $wa_transaction_data
-     * @return array|null
+     * @param array $transaction_data
+     * @return array
      */
-    public function callbackDeclineHandler($wa_transaction_data)
+    public function callbackDeclineHandler($transaction_data)
     {
-        return null;
+        return $this->workflowAction('callback', $transaction_data);
     }
 
     /**
-     *
-     *
-     * @param array $wa_transaction_data
-     * @return array|null
+     * @param array $transaction_data
+     * @return array
      */
-    public function callbackRefundHandler($wa_transaction_data)
+    public function callbackRefundHandler($transaction_data)
     {
-        return null;
+        $result = $this->workflowAction('callback', $transaction_data);
+        if (empty($result['error'])) {
+            $workflow = new shopWorkflow();
+            $workflow->getActionById('refund')->run($transaction_data['order_id']);
+        }
+        return $result;
     }
 
     /**
-     *
-     *
-     * @param array $wa_transaction_data
-     * @return array|null
+     * @param array $transaction_data
+     * @return array
      */
-    public function callbackCaptureHandler($wa_transaction_data)
+    public function callbackCaptureHandler($transaction_data)
     {
-        return null;
+        return $this->callbackPaymentHandler($transaction_data);
     }
 
     /**
-     *
-     *
-     * @param array $wa_transaction_data
-     * @return array|null
+     * @param array $transaction_data
+     * @return array
      */
-    public function callbackChargebackHandler($wa_transaction_data)
+    public function callbackChargebackHandler($transaction_data)
     {
-        return null;
+        return $this->workflowAction('callback', $transaction_data);
     }
 
     /**
-     *
-     *
-     * @param array $wa_transaction_data
-     * @return array|null
+     * @param array $transaction_data
+     * @return array
      */
-    public function callbackConfirmationHandler($wa_transaction_data)
+    public function callbackConfirmationHandler($transaction_data)
     {
-        return null;
+        $result = $this->workflowAction('callback', $transaction_data);
+        if (empty($result['error'])) {
+            $order_model = new shopOrderModel();
+            $order = $order_model->getById($transaction_data['order_id']);
+            $result['result'] = true;
+            $total = $transaction_data['amount'];
+
+            if ($transaction_data['currency_id'] != $order['currency']) {
+                $total = shop_currency($total, $transaction_data['currency_id'], $order['currency'], false);
+            }
+            if (abs($order['total'] - $total) > 0.01) {
+                $result['result'] = false;
+                $result['error'] = sprintf('Invalid order amount: expect %f, but get %f', $order['total'], $total);
+            } else {
+                $workflow = new shopWorkflow();
+                $workflow->getActionById('process')->run($transaction_data['order_id']);
+            }
+        }
+        return $result;
     }
 }

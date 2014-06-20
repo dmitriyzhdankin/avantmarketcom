@@ -18,7 +18,7 @@ body { line-height: 1; }
 /* Common HTML elements, fonts, and colors
 ------------------------------------------ */
 html,
-body { width: 100%; min-height: 100%; font-family: Helvetica, Arial, sans-serif; font-size: 13px; background: url("img/cloth-background.jpg"); /* customize core background image here */ }
+body { width: 100%; min-height: 100%; font-family: 'Roboto', Helvetica, Arial, sans-serif; font-size: 13px; background: url("img/cloth.jpg"); /* customize core background image here */ }
 a { color: #03c; outline:0 none; }
 a:focus { outline:none; outline-offset:-4px; }
 a:visited { color: #63c; }
@@ -93,6 +93,8 @@ hr { background-color: #ccc; height: 1px; border: 0; }
 .content.right #page { margin-right: 50px; /* extra margin in case page tree is on the right */ }
 .top-padded { padding-top: 50px; /* "due to heading" padding */ }
 
+.welcome { text-align: center; font-size: 110%; padding: 80px 20px 150px; }
+
 #header { margin-bottom: 30px; margin-top: -25px; }
 #header h2 { float: left; text-transform: uppercase; margin-top: 25px; }
 #header h2 a { color: #000; text-decoration: none; }
@@ -166,6 +168,7 @@ ul.menu-h { margin: 0 0 15px; padding: 0; }
 ul.menu-h li { list-style: none; display: inline-block; padding: 0 10px 0 0; display:block\9; float:left\9; /* ie8 hack */ }
 ul.menu-h li a { display: inline-block; padding: 0px 5px; display:block\9; float:left\9; /* ie8 hack */ }
 ul.menu-h li a img.icon16 { position: relative; top: 3px; left: -3px; }
+ul.menu-h li a i.icon16 { margin-top: 0em; }
 ul.menu-h li.selected a { color: #000; text-decoration: none; background: #eee; }
 ul.menu-h li.selected ul * { background: #fff !important; }
 
@@ -229,6 +232,8 @@ i.icon16 { background-repeat:no-repeat; height:16px; width:16px; display:inline-
 .icon16.twitter { background-image: url("img/icons/twitter.png"); }
 .icon16.cart { background-image: url('img/icons/cart-full.png'); }
 .icon16.cart.empty { background-image: url('img/icons/cart-empty.png'); }
+
+.icon16.color { border-radius: 50%; border: 1px solid rgba(0,0,0,0.2); width: 14px; height: 14px; }
 
 /* 10x10 Icons
 -------------- */

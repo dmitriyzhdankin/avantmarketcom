@@ -23,6 +23,9 @@ class waContactForm
     /** Contact to validate this form against. */
     public $contact = null;
 
+    /** Can be used to feed faked POST data into this form. */
+    public $post = null;
+
     /**
      * Factory method to load form fields from config.
      *
@@ -92,7 +95,7 @@ class waContactForm
                     }
                 }
             } else {
-                waLog::log('Field '.$fid.' has incorrect format and is ignored in '.$file);
+                waLog::log('Field '.$full_field_id.' has incorrect format and is ignored in '.$file);
                 continue;
             }
 
@@ -116,9 +119,7 @@ class waContactForm
 
         $f = clone $f;
         foreach ($opts as $k => $v) {
-            foreach($opts as $k => $v) {
-                $f->setParameter($k, $v);
-            }
+            $f->setParameter($k, $v);
         }
         return $f;
     }
@@ -199,14 +200,16 @@ class waContactForm
      */
     public function post($field_id = null)
     {
-        $post = waRequest::post($this->opt('namespace'));
-        if (!$post) {
+        if ($this->post === null) {
+            $this->post = waRequest::post($this->opt('namespace'));
+        }
+        if (!$this->post || !is_array($this->post)) {
             return null;
         }
         if ($field_id) {
-            return ifset($post[$field_id]);
+            return ifset($this->post[$field_id]);
         }
-        return $post;
+        return $this->post;
     }
 
     /**
@@ -291,8 +294,15 @@ class waContactForm
             }
             if ($this->post()) {
                 $opts['value'] = $this->fields[$field_id]->set($this->contact, $this->post($field_id), array());
-            } else if (isset($this->values[$field_id])) {
+            } else if (isset($this->values[$field_id]) &&
+                ((is_array($this->values[$field_id]) && count($this->values[$field_id]) > 0) ||
+                 (!is_array($this->values[$field_id]) && strlen((string)$this->values[$field_id])))) {
                 $opts['value'] = $this->fields[$field_id]->set($this->contact, $this->values[$field_id], array());
+            } else {
+                $default_value = $this->fields[$field_id]->getParameter('value');
+                if ($default_value) {
+                    $opts['value'] = $this->fields[$field_id]->set($this->contact, $default_value, array());
+                }
             }
 
             // HTML with no errors?
@@ -315,7 +325,14 @@ class waContactForm
                 continue;
             }
 
-            $result .= '<div class="'.$class_field.($f->isRequired() ? ' '.(wa()->getEnv() == 'frontend' ? 'wa-required' : 'required') : '').'"><div class="'.$class_name.'">'.
+            $field_class = $class_field.'-'.$f->getId();
+            if (strpos($fid, '.') !== false) {
+                $field_class .= ' '.$class_field.'-'.str_replace('.', '-', $fid);
+            }
+            if ($f->isRequired()) {
+                $field_class .= ' '.(wa()->getEnv() == 'frontend' ? 'wa-required' : 'required');
+            }
+            $result .= '<div class="'.$class_field.' '.$field_class.'"><div class="'.$class_name.'">'.
                 $f->getName().'</div><div class="'.$class_value.'">';
             $result .= "\n".$this->html($fid, $with_errors);
             $result .= "\n</div></div>";

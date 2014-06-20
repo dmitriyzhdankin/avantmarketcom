@@ -63,6 +63,12 @@ abstract class waPayment extends waSystemPlugin
      * @var string
      */
     const CALLBACK_CHARGEBACK = 'chargeback';
+    /**
+     * Обработка информационного сообщения
+     * @var string
+     */
+    const CALLBACK_NOTIFY = 'notify';
+
 
     /**
      * Operation types
@@ -163,17 +169,22 @@ abstract class waPayment extends waSystemPlugin
 
     protected $app_id;
 
+    private $guide = null;
+
     /**
      *
      * Get payment plugin instance
-     * @param string $id
-     * @param waiPluginSettings $adapter optional
-     * @param int $merchant_id Merchant key
+     * @param string $id plugin identity (e.g. cash, paypal, etc.)
+     * @param int $merchant_id Merchant settings key
+     * @param string|waAppPayment $app_adapter app_id or application adapter
      * @return waPayment
      */
     public static function factory($id, $merchant_id = null, $app_adapter = null)
     {
         $instance = parent::factory($id, $merchant_id, self::PLUGIN_TYPE);
+        /**
+         * @var waPayment $instance
+         */
         if ($app_adapter && ($app_adapter instanceof waAppPayment)) {
             $instance->app_adapter = $app_adapter;
         } elseif ($app_adapter && is_string($app_adapter)) {
@@ -186,6 +197,7 @@ abstract class waPayment extends waSystemPlugin
     /**
      * Enumerate available payment plugins
      * @param $options array
+     * @param null $type will be ignored
      * @return array
      */
     final public static function enumerate($options = array(), $type = null)
@@ -197,14 +209,16 @@ abstract class waPayment extends waSystemPlugin
      *
      * Get plugin description
      * @param string $id
-     * @return array[string]string
-     * @return array['name']string
-     * @return array['description']string
-     * @return array['version']string
-     * @return array['build']string
-     * @return array['logo']string
-     * @return array['icon'][int]string
-     * @return array['img']string
+     * @param array $options
+     * @param null $type will be ignored
+     * @return string[string]
+     * @return string['name']
+     * @return string['description']
+     * @return string['version']
+     * @return string['build']
+     * @return string['logo']
+     * @return string[unt]['icon'][int]
+     * @return string['img']
      */
     final public static function info($id, $options = array(), $type = null)
     {
@@ -240,20 +254,34 @@ abstract class waPayment extends waSystemPlugin
         return null;
     }
 
+    /**
+     * @param array $payment_form_data POST form data
+     * @param waOrder $order_data formalized order data
+     * @param bool $auto_submit
+     * @return string HTML payment form
+     */
+    public function payment($payment_form_data, $order_data, $auto_submit = false)
+    {
+        return '';
+    }
+
     //Callback
 
     final public static function callback($module_id, $request = array())
     {
         self::log($module_id, $request);
+        $module = null;
         try {
             $module = self::factory($module_id);
             return $module->callbackInit($request)->init()->callbackHandler($request);
         } catch (Exception $ex) {
+            self::log($module ? $module_id : 'general', $ex->getMessage());
             if ($module) {
                 return $module->callbackExceptionHandler($ex);
             } else {
                 return array(
                     'error' => $ex->getMessage(),
+                    'code'  => $ex->getCode(),
                 );
             }
         }
@@ -270,6 +298,7 @@ abstract class waPayment extends waSystemPlugin
      *
      * Determine target application and merchant key
      * @param array $request
+     * @return waPayment
      */
     protected function callbackInit($request)
     {
@@ -294,44 +323,41 @@ abstract class waPayment extends waSystemPlugin
     /**
      *
      * Enter description here ...
-     * @param unknown_type $method
-     * @param unknown_type $transaction_data
+     * @param string $method
+     * @param array $transaction_data
      * @return array[string]mixed
      * @return array['order_id']int
      * @return array['customer_id']int
-     * @return array['result']booleant
+     * @return array['result']boolean
      * @return array['error']string
      */
     protected function execAppCallback($method, $transaction_data)
     {
-        $default = array(
-            'order_id'    => null,
-            'customer_id' => null,
-            'result'      => true,
-            'error'       => null,
-        );
         try {
             $result = $this->getAdapter()->execCallbackHandler($method, $transaction_data);
-        } catch (Exception $ex) {
-            $result = array('error' => $ex->getMessage());
-        }
-        if (!empty($result)) {
-            $result = array_merge($default, $result);
-        } else {
-            self::log($this->id, array(
-                'method'          => __METHOD__,
-                'callback_method' => $method,
-                'app_id'          => $this->app_id,
-                'warning'         => 'empty callback response',
-            ));
-            $result = $default;
+        } catch (Exception $e) {
+            $result = array('error' => $e->getMessage());
         }
         self::log($this->id, array(
             'method'           => __METHOD__,
+            'app_id'           => $this->app_id,
             'callback_method'  => $method,
             'transaction_data' => var_export($transaction_data, true),
             'result'           => var_export($result, true),
         ));
+
+        if ($result) {
+            $transaction_model = new waTransactionModel();
+            $data = array();
+            foreach (array('order_id', 'customer_id', 'result', 'error') as $k) {
+                if (isset($result[$k])) {
+                    $data[$k] = $result[$k];
+                }
+            }
+            if ($data && !empty($transaction_data['id'])) {
+                $transaction_model->updateById($transaction_data['id'], $data);
+            }
+        }
         return $result;
     }
 
@@ -458,10 +484,9 @@ abstract class waPayment extends waSystemPlugin
     /**
      * Saves formatted data and raw data to DB
      *
-     * @param $transaction_data array
-     * @param $transaction_raw_data array
-     *
-     * @return int - transaction_id
+     * @param $wa_transaction_data
+     * @param array $transaction_raw_data
+     * @return array
      *
      * @tutorial $transaction_data array format:
      * type – one of: 'AUTH+CAPTURE', 'AUTH ONLY', 'CAPTURE', 'REFUND', 'CANCEL', 'CHARGEBACK'
@@ -522,10 +547,10 @@ abstract class waPayment extends waSystemPlugin
     }
 
     /**
-     * void method (optionaly used in child methods)
+     * void method (optionally used in child methods)
      * @param array $transaction_data
      * @param array $transaction_raw_data
-     * @return false
+     * @return bool
      */
     protected function allowedTransactionCustomized($transaction_data, $transaction_raw_data)
     {
@@ -543,7 +568,7 @@ abstract class waPayment extends waSystemPlugin
         $transaction_raw_data = $transaction['raw_data'];
         unset($transaction['raw_data']);
 
-        $instance = self::factory($id, null, $transaction['merchant_id']);
+        $instance = self::factory($transaction['plugin'], $transaction['merchant_id'], $transaction['app_id']);
 
         $result = $instance->allowedTransactionCustomized($transaction, $transaction_raw_data);
         if ($result) {
@@ -572,6 +597,7 @@ abstract class waPayment extends waSystemPlugin
         }
         return $operations;
     }
+
     /**
      * Convert transaction raw data to formatted data
      * @param array $transaction_raw_data
@@ -592,32 +618,12 @@ abstract class waPayment extends waSystemPlugin
      * Adds order [and customer] info to wa_transaction DB table (for cases like Google Checkout)
      * @param $wa_transaction_id int
      * @param $result array
-     * @param $state string
      * @return bool result
+     * @deprecated
      */
-    final public static function addTransactionData($wa_transaction_id, $result = null, $state = null)
+    final public static function addTransactionData($wa_transaction_id, $result = null)
     {
-        $transaction_model = new waTransactionModel();
-        $data = array();
-        if (isset($result['order_id'])) {
-            $data['order_id'] = $result['order_id'];
-        }
-        if (isset($result['customer_id'])) {
-            $data['customer_id'] = $result['customer_id'];
-        }
-        if (isset($result['result'])) {
-            $data['result'] = $result['result'];
-        }
-        if (isset($result['error'])) {
-            $data['error'] = $result['error'];
-        }
-        if ($state) {
-            $data['state'] = $state;
-        }
-        if ($data) {
-            return $transaction_model->updateById($wa_transaction_id, $data);
-        }
-        return false;
+        return true;
     }
 
     /**
@@ -633,21 +639,24 @@ abstract class waPayment extends waSystemPlugin
         $transactions = $transaction_model->getByFields($conditions);
         $transactions_data = $transaction_data_model->getByField('transaction_id', array_keys($transactions), true);
 
-        foreach ($transactions_data as $key => $row) {
+        foreach ($transactions_data as $row) {
             $transactions[$row['transaction_id']]['raw_data'][$row['field_id']] = $row['value'];
         }
         return $transactions;
     }
 
     /**
+     * @param bool $force_https
      * @return string callback relay url
      */
-    public final function getRelayUrl($force_https = false)
+    public final function getRelayUrl($force_https = null)
     {
         $url = wa()->getRootUrl(true).'payments.php/'.$this->id.'/';
         //TODO detect - is allowed https
         if ($force_https) {
             $url = preg_replace('@^http://@', 'https://', $url);
+        } elseif ($force_https === false) {
+            $url = preg_replace('@^https://@', 'http://', $url);
         }
         return $url;
     }
@@ -658,7 +667,7 @@ abstract class waPayment extends waSystemPlugin
      * @example waPayment::execTransactionCallback(waPayment::TRANSACTION_CAPTURE,'AuthorizeNet',$request)
      * @param $module_id string Module identity
      * @param $request array
-     * @return unknown_type
+     * @return mixed
      * @deprecated
      */
     public static function execTransactionCallback($request, $module_id)
@@ -667,15 +676,105 @@ abstract class waPayment extends waSystemPlugin
     }
 
     /**
+     * @param waOrder $order
      * @return array[string]array
      * @return array[string]['name']string название печатной формы
-     * @return array[string]['desription']string описание печатной формы
+     * @return array[string]['description']string описание печатной формы
      */
-    public function getPrintForms()
+    public function getPrintForms(waOrder $order = null)
     {
         return array();
     }
 
+    private function guide()
+    {
+        if ($this->guide === null) {
+            $path = $this->path.'/lib/config/guide.php';
+            if (file_exists($path)) {
+                $this->guide = include($path);
+
+                foreach ($this->guide as & $guide) {
+                    if (isset($guide['title'])) {
+                        $guide['title'] = $this->_w($guide['title']);
+                    }
+                    if (isset($guide['description'])) {
+                        $guide['description'] = $this->_w($guide['description']);
+                    }
+                }
+                unset($guide);
+            }
+            if (!is_array($this->guide)) {
+                $this->guide = array();
+            }
+        }
+        return $this->guide;
+    }
+
+    public function getGuide($params = array())
+    {
+
+        $controls = array();
+        $default = array(
+            'instance'            => & $this,
+            'title_wrapper'       => '%s',
+            'description_wrapper' => '<br><span class="hint">%s</span>',
+            'translate'           => array(&$this, '_w'),
+            'readonly'            => true,
+            'control_wrapper'     => '
+<div class="field">
+    <div class="name">%s</div>
+    <div class="value">%s%s</div>
+</div>
+',
+        );
+        $options = ifempty($params['options'], array());
+        $values = ifempty($params['value'], array());
+
+        unset($params['options']);
+        unset($params['value']);
+
+        if (isset($params['namespace'])) {
+            unset($params['namespace']);
+        }
+        $params = array_merge($default, $params);
+        ifempty($params['class'], array());
+        if (!is_array($params['class'])) {
+            $params['class'] = array($params['class']);
+        }
+        $params['class'][] = 'long';
+
+        $replace = array(
+            '%RELAY_URL%'       => $this->getRelayUrl(),
+            '%HTTP_RELAY_URL%'  => $this->getRelayUrl(false),
+            '%HTTPS_RELAY_URL%' => $this->getRelayUrl(true),
+            '%APP_ID%'          => $this->app_id,
+            '%MERCHANT_ID%'     => $this->merchant_id,
+        );
+
+        foreach ($this->guide() as $name => $row) {
+            if (is_array($row)) {
+                if (isset($row['class']) && !is_array($row['class'])) {
+                    $row['class'] = empty($row['class']) ? array() : array($row['class']);
+                }
+                if (isset($row['class'])) {
+                    $params['class'] = array_merge(array_values($row['class']), array_values($params['class']));
+                }
+                $row = array_merge($row, $params);
+                if (isset($options[$name])) {
+                    $row['options'] = $options[$name];
+                }
+                if (isset($values[$name])) {
+                    $row['value'] = $values[$name];
+                }
+
+                $row['value'] = str_replace(array_keys($replace), array_values($replace), $row['value']);
+                $controls[$name] = waHtmlControl::getControl(ifempty($row['control_type'], waHtmlControl::INPUT), false, $row);
+            } else {
+                $controls[$name] = sprintf($params['control_wrapper'], '', '', $row);
+            }
+        }
+        return implode("\n", $controls);
+    }
 
     public function customFields(waOrder $order)
     {
@@ -688,6 +787,7 @@ abstract class waPayment extends waSystemPlugin
      * @param string $id
      * @param waOrder $order
      * @param array $params
+     * @return string
      */
     public function displayPrintForm($id, waOrder $order, $params = array())
     {
@@ -696,6 +796,7 @@ abstract class waPayment extends waSystemPlugin
 
     /**
      *
+     * @throws waException
      * @return waAppPayment
      */
     final protected function getAdapter()
@@ -724,26 +825,37 @@ abstract class waPayment extends waSystemPlugin
         return $this->app_adapter;
     }
 
+    /**
+     * @param $iso3code
+     * @return mixed
+     * @throws waException
+     */
+    protected function getCountryISO2Code($iso3code)
+    {
+        $country_model = new waCountryModel();
+        $country = $country_model->get($iso3code);
+        if (!$country) {
+            throw new waException($this->_w("Unknown country: ").$iso3code);
+        }
+        return strtoupper($country['iso2letter']);
+    }
+
 }
+
 interface waIPayment
 {
-    /**
-     * @param array $payment_form_data POST form data
-     * @param waOrder $order_data formalized order data
-     * @return string HTML payment form
-     */
-    public function payment($payment_form_data, $order_data, $transaction_type);
+
 }
 
 interface waIPaymentCancel
 {
     /**
      *
-     * @param array[string]mixed $transaction_raw_data['order_data']
-     * @param array[string]mixed $transaction_raw_data['transaction_type']
-     * @param array[string]mixed $transaction_raw_data['customer_data']
-     * @param array[string]mixed $transaction_raw_data['transaction']
-     * @param array[string]mixed $transaction_raw_data['refund_amount']
+     * @param array [string]mixed $transaction_raw_data['order_data']
+     * @param array [string]mixed $transaction_raw_data['transaction_type']
+     * @param array [string]mixed $transaction_raw_data['customer_data']
+     * @param array [string]mixed $transaction_raw_data['transaction']
+     * @param array [string]mixed $transaction_raw_data['refund_amount']
      */
     public function cancel($transaction_raw_data);
 }
@@ -752,11 +864,11 @@ interface waIPaymentCapture
 {
     /**
      *
-     * @param array[string]mixed $transaction_raw_data['order_data']
-     * @param array[string]mixed $transaction_raw_data['transaction_type']
-     * @param array[string]mixed $transaction_raw_data['customer_data']
-     * @param array[string]mixed $transaction_raw_data['transaction']
-     * @param array[string]mixed $transaction_raw_data['refund_amount']
+     * @param array [string]mixed $transaction_raw_data['order_data']
+     * @param array [string]mixed $transaction_raw_data['transaction_type']
+     * @param array [string]mixed $transaction_raw_data['customer_data']
+     * @param array [string]mixed $transaction_raw_data['transaction']
+     * @param array [string]mixed $transaction_raw_data['refund_amount']
      */
     public function capture($transaction_raw_data);
 }
@@ -765,11 +877,11 @@ interface waIPaymentRefund
 {
     /**
      *
-     * @param array[string]mixed $transaction_raw_data['order_data']
-     * @param array[string]mixed $transaction_raw_data['transaction_type']
-     * @param array[string]mixed $transaction_raw_data['customer_data']
-     * @param array[string]mixed $transaction_raw_data['transaction']
-     * @param array[string]mixed $transaction_raw_data['refund_amount']
+     * @param array [string]mixed $transaction_raw_data['order_data']
+     * @param array [string]mixed $transaction_raw_data['transaction_type']
+     * @param array [string]mixed $transaction_raw_data['customer_data']
+     * @param array [string]mixed $transaction_raw_data['transaction']
+     * @param array [string]mixed $transaction_raw_data['refund_amount']
      */
     public function refund($transaction_raw_data);
 }

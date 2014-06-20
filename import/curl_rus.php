@@ -1,12 +1,12 @@
 <?php
 
 //DBCONNECTR
-$link = mysql_connect('localhost', 'avantmarket', 'hpQh0Y3z');
+$link = mysql_connect('localhost', 'root', '123321');
 if (!$link) {
     die('Could not connect: ' . mysql_error());
 }
 //echo 'Connected successfully';
-mysql_select_db('avantmarket'); 
+mysql_select_db('avantmarket.com'); 
 		  mysql_query('SET character_set_database = utf8');
 		  mysql_query('SET NAMES utf8');
 //DBCONNECTRdom
@@ -118,11 +118,11 @@ function xml2array($domnode)
                  $pU = 0; $sU = 0; $c1 = 0; $c2 = 0;
 				
 				 
-				 foreach($db_products as $db_key => $db_product){							 
-					 
+				 foreach($db_products as $db_key => $db_product){
+
 					 $updateProduct = mysql_query('UPDATE shop_product SET price='.$db_product['price'].',
 					 count='.($db_product['count1'] + $db_product['count2']).' WHERE id = '.$db_product['id'].'');
-					 $updateSKU = mysql_query('UPDATE shop_product_skus SET price='.$db_product['price'].', purchase_price='.$db_product['purchase_price'].'
+					 $updateSKU = mysql_query('UPDATE shop_product_skus SET price='.$db_product['price'].', purchase_price='.$db_product['purchase_price'].', count = '.$db_product['count1'].' 
 					 WHERE sku = "'.$db_key.'" AND product_id = '.$db_product['id'].' AND id = '.$db_product['sku_id'].' ');
 					 
 					 $isCount1Query = mysql_query('SELECT count FROM  shop_product_stocks 

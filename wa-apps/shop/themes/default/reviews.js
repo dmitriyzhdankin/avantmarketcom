@@ -15,9 +15,9 @@ $(function() {
         }
     };
 
-    var form_wrapper = $('#product-reivew-form');
+    var form_wrapper = $('#product-review-form');
     var form = form_wrapper.find('form');
-    var content = $('.content .reviews');
+    var content = $('#page-content .reviews');
 
     var input_rate = form.find('input[name=rate]');
     if (!input_rate.length) {
@@ -29,18 +29,20 @@ $(function() {
         }
     });
 
-    content.off('click', '.review-reply, .write-review a').on('click', '.review-reply, .write-review a', function() {
+    content.off('click', '.review-reply, .write-review a').on('click', '.review-reply, .write-review a', function() { 
         var self = $(this);
         var item = self.parents('li:first');
         var parent_id = parseInt(item.attr('data-id'), 10) || 0;
         prepareAddingForm.call(self, parent_id);
+        $('.review').removeClass('in-reply-to');
+        item.find('.review:first').addClass('in-reply-to');
         return false;
     });
 
     var captcha = $('.wa-captcha');
     var provider_list = $('#user-auth-provider li');
     var current_provider = provider_list.filter('.selected').attr('data-provider');
-    if (current_provider == 'guest') {
+    if (current_provider == 'guest' || !current_provider) {
         captcha.show();
     } else {
         captcha.hide();
@@ -104,16 +106,23 @@ $(function() {
                 var parent_id = parseInt(r.data.parent_id, 10) || 0;
                 var parent_item = parent_id ? form.parents('li:first') : content;
                 var ul = $('ul.reviews-branch:first', parent_item);
+                
                 if (parent_id) {
+                    //reply to a review
                     ul.show().append(html);
+                    ul.find('li:last .review').addClass('new');
                 } else {
+                    //top-level review
                     ul.show().prepend(html);
+                    ul.find('li:first .review').addClass('new');
                 }
+                
                 $('.reviews-count-text').text(r.data.review_count_str);
                 $('.reviews-count').text(r.data.count);
                 form.find('input[name=count]').val(r.data.count);
                 clear(form, true);
                 content.find('.write-review a').click();
+                
                 form_wrapper.hide();
                 if (typeof success === 'function') {
                     success(r);

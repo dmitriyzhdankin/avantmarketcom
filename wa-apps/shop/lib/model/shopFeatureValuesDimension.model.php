@@ -24,12 +24,12 @@ class shopFeatureValuesDimensionModel extends shopFeatureValuesModel
                 $value = trim(is_array($value) ? reset($value) : $value);
                 if (preg_match('/^(\-?\d+([\.,]\d+)?)\s+(.+)$/', $value, $matches)) {
                     $value = array(
-                        'value' => doubleval($matches[1]),
-                        'unit'  => trim($matches[3]),
+                        'value' => $this->castValue('double', $matches[1]),
+                        'unit'  => shopDimension::castUnit($type, trim($matches[3])),
                     );
                 } else {
                     $value = array(
-                        'value' => doubleval(str_replace(',', '.', $value)),
+                        'value' => $this->castValue('double', $value),
                         'unit'  => '',
                     );
                 }
@@ -40,7 +40,7 @@ class shopFeatureValuesDimensionModel extends shopFeatureValuesModel
         if (!empty($value['code'])) {
             if (strpos($value['code'], '.')) {
                 list($data['type'], $data['unit']) = explode('.', $value['code'], 2);
-                $dimension = $dimensions->getDimension($data['type']);
+                //$dimension = $dimensions->getDimension($data['type']);
             } elseif ($dimension = $dimensions->getDimension(empty($value['type']) ? $value['code'] : $value['type'])) {
                 $data['type'] = !empty($value['type']) ? $value['type'] : $value['code'];
                 $data['unit'] = !empty($value['unit']) ? $value['unit'] : $dimension['base_unit'];
@@ -59,13 +59,26 @@ class shopFeatureValuesDimensionModel extends shopFeatureValuesModel
 
         $data['unit'] = $dimensions->fixUnit($data['type'], $data['unit']);
 
-        $data['value'] = isset($value['value']) ? doubleval($value['value']) : 0;
+        $data['value'] = isset($value['value']) ? $this->castValue('double', $value['value']) : 0;
         $data['value_base_unit'] = $dimensions->convert($data['value'], $data['type'], null, $data['unit']);
         return $data;
     }
 
     protected function getSearchCondition()
     {
-        return '= :value) AND (`unit` = s:unit';
+        return '(`value`= :value) AND (`unit` = s:unit)';
+    }
+
+    public function getValueIdsByRange($feature_id, $min, $max)
+    {
+        $sql = 'SELECT id FROM '.$this->table.'
+                WHERE feature_id = i:0';
+        if ($min !== null && $min !== '') {
+            $sql .= ' AND value_base_unit >= f:1';
+        }
+        if ($max !== null && $max !== '') {
+            $sql .= ' AND value_base_unit <= f:2';
+        }
+        return $this->query($sql, $feature_id, $min, $max)->fetchAll(null, true);
     }
 }

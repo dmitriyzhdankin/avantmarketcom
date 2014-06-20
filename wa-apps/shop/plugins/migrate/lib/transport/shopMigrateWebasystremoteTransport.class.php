@@ -4,6 +4,7 @@ class shopMigrateWebasystremoteTransport extends shopMigrateWebasystTransport
 {
     private $stage_data_stack = array();
     const TIMEOUT_SOCKET = 15;
+
     protected function initOptions()
     {
         parent::initOptions();
@@ -47,7 +48,9 @@ class shopMigrateWebasystremoteTransport extends shopMigrateWebasystTransport
 
     public function init()
     {
-
+        if (!$this->curlAvailable()) {
+            throw new waException('PHP extension curl not loaded');
+        }
     }
 
     protected function query($sql, $one = true)
@@ -102,7 +105,8 @@ class shopMigrateWebasystremoteTransport extends shopMigrateWebasystTransport
                 $this->log(array(
                     'url'     => self::logURL($url),
                     'message' => $ex->getMessage(),
-                    $url), self::LOG_ERROR);
+                    $url
+                ), self::LOG_ERROR);
                 sleep(5);
                 return $this->moveFile($path, $target, $public);
             } else {
@@ -134,7 +138,7 @@ class shopMigrateWebasystremoteTransport extends shopMigrateWebasystTransport
     {
         $ch = null;
         try {
-            $this->log(__METHOD__.' :download via cURL', self::LOG_DEBUG, array('source' => self::logURL($url), ));
+            $this->log(__METHOD__.' :download via cURL', self::LOG_DEBUG, array('source' => self::logURL($url),));
             $content_length = 0;
             $download_content_length = 0;
             $ch = $this->getCurl($url);
@@ -144,8 +148,14 @@ class shopMigrateWebasystremoteTransport extends shopMigrateWebasystTransport
                 'stage_value'         => & $content_length,
                 'stage_current_value' => & $download_content_length,
             );
+            $post = array();
+            @parse_str(parse_url($url, PHP_URL_QUERY), $post);
+            if (!empty($post['sql'])) {
+                curl_setopt($ch, CURLOPT_POST, true);
+                curl_setopt($ch, CURLOPT_POSTFIELDS, array('sql' => $post['sql']));
+            }
 
-            $res = curl_exec($ch);
+            curl_exec($ch);
             if ($errno = curl_errno($ch)) {
                 $url = self::logURL($url);
                 $message = "Curl error: {$errno}# ".curl_error($ch)." at [{$url}]";
@@ -156,10 +166,10 @@ class shopMigrateWebasystremoteTransport extends shopMigrateWebasystTransport
             if ($status != 200) {
                 throw new waException(sprintf(_wp("Invalid server response with code %d"), $status), $status);
             }
-            curl_close($ch);
             if ($target_stream && is_resource($target_stream)) {
                 fclose($target_stream);
             }
+            curl_close($ch);
 
             return $content_length;
         } catch (waException $ex) {
@@ -174,9 +184,14 @@ class shopMigrateWebasystremoteTransport extends shopMigrateWebasystTransport
         }
     }
 
+    /**
+     * @param $ch
+     * @param string $chunk
+     * @return int
+     * @throws waException
+     */
     public function curlWriteHandler($ch, $chunk)
     {
-        $size = 0;
         if ($this->stage_data_stack['stream'] && is_resource($this->stage_data_stack['stream'])) {
             $size = fwrite($this->stage_data_stack['stream'], $chunk);
             $this->stage_data_stack['stage_current_value'] += $size;
@@ -187,16 +202,16 @@ class shopMigrateWebasystremoteTransport extends shopMigrateWebasystTransport
         } else {
             throw new waException('Invalid write stream');
         }
-        $state_data = array(
-            'stage_value'         => $this->stage_data_stack['stage_value'],
-            'stage_current_value' => $this->stage_data_stack['stage_current_value'],
-        );
         return $size;
     }
 
+    /**
+     * @param $ch
+     * @param string $header
+     * @return int
+     */
     public function curlHeaderHandler($ch, $header)
     {
-        //$this->log(__METHOD__, self::LOG_DEBUG, $header);
         $header_matches = null;
         if (preg_match('/content-length:\s*(\d+)/i', $header, $header_matches)) {
             $this->stage_data_stack['stage_value'] = intval($header_matches[1]);
@@ -212,7 +227,7 @@ class shopMigrateWebasystremoteTransport extends shopMigrateWebasystTransport
     private function getCurl($url, $curl_options = array())
     {
         $ch = null;
-        if (!extension_loaded('curl') || !function_exists('curl_init')) {
+        if (!$this->curlAvailable()) {
             throw new waException(_wp('PHP extension curl not loaded'));
         }
         if (!($ch = curl_init())) {
@@ -227,14 +242,14 @@ class shopMigrateWebasystremoteTransport extends shopMigrateWebasystTransport
         }
         $curl_default_options = array(
             // CURLOPT_MAXCONNECTS => 10,
-            CURLOPT_HEADER => 0,
-            CURLOPT_RETURNTRANSFER => 1,
-            CURLOPT_TIMEOUT => self::TIMEOUT_SOCKET * 60,
-            CURLOPT_CONNECTTIMEOUT => self::TIMEOUT_SOCKET,
+            CURLOPT_HEADER            => 0,
+            CURLOPT_RETURNTRANSFER    => 1,
+            CURLOPT_TIMEOUT           => self::TIMEOUT_SOCKET * 60,
+            CURLOPT_CONNECTTIMEOUT    => self::TIMEOUT_SOCKET,
             CURLE_OPERATION_TIMEOUTED => self::TIMEOUT_SOCKET * 60,
-            CURLOPT_BINARYTRANSFER => true,
-            CURLOPT_WRITEFUNCTION => array(&$this, 'curlWriteHandler'),
-            CURLOPT_HEADERFUNCTION => array(&$this, 'curlHeaderHandler'),
+            CURLOPT_BINARYTRANSFER    => true,
+            CURLOPT_WRITEFUNCTION     => array(&$this, 'curlWriteHandler'),
+            CURLOPT_HEADERFUNCTION    => array(&$this, 'curlHeaderHandler'),
         );
 
         if ((version_compare(PHP_VERSION, '5.4', '>=') || !ini_get('safe_mode')) && !ini_get('open_basedir')) {
@@ -246,12 +261,6 @@ class shopMigrateWebasystremoteTransport extends shopMigrateWebasystTransport
             }
         }
         $curl_options[CURLOPT_URL] = $url;
-        $options_fields = array(
-            'host'     => 'PROXY_HOST',
-            'port'     => 'PROXY_PORT',
-            'user'     => 'PROXY_USER',
-            'password' => 'PROXY_PASS',
-        );
         $options = array();
 
         if (isset($options['host']) && strlen($options['host'])) {

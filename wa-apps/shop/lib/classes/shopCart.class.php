@@ -9,9 +9,13 @@ class shopCart
      */
     protected $model;
 
-    public function __construct()
+    /**
+     * Constructor
+     * @param string $code Cart unique ID
+     */
+    public function __construct($code='')
     {
-        $this->code = waRequest::cookie(self::COOKIE_KEY);
+        $this->code = waRequest::cookie(self::COOKIE_KEY, $code);
         $this->model = new shopCartItemsModel();
     }
 
@@ -36,26 +40,28 @@ class shopCart
     public function total($discount = true)
     {
         if (!$discount) {
-            return $this->model->total($this->code);
+            return (float) $this->model->total($this->code);
         }
         $total = $this->getSessionData('total');
         if ($total === null) {
             $total = $this->model->total($this->code);
             $order = array(
-                'total' => $total
+                'total' => $total,
+                'items' => $this->items(false)
             );
             $discount = shopDiscounts::calculate($order);
             $total = $total - $discount;
             $this->setSessionData('total', $total);
         }
-        return $total;
+        return (float) $total;
     }
 
     public function discount()
     {
         $total = $this->model->total($this->code);
         $order = array(
-            'total' => $total
+            'total' => $total,
+            'items' => $this->items(false)
         );
         return shopDiscounts::calculate($order);
     }
@@ -133,7 +139,12 @@ class shopCart
         }
 
         foreach ($items as $s) {
-            $price += shop_currency($prices[$s['service_variant_id']]['price'] * $item['quantity'], $prices[$s['service_variant_id']]['currency'], null, false);
+            $v = $prices[$s['service_variant_id']];
+            if ($v['currency'] == '%') {
+                $v['price'] = $v['price'] * $item['price'] / 100;
+                $v['currency'] = $item['currency'];
+            }
+            $price += shop_currency($v['price'] * $item['quantity'], $v['currency'], null, false);
         }
         return $price;
     }

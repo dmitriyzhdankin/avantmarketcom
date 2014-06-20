@@ -18,6 +18,7 @@ class webasystLoginAction extends waLoginAction
             }
             $this->template = wa()->getAppPath('templates/actions/login/', 'webasyst').$this->template;
         }
+        $this->view->assign('login', waRequest::post('login', $this->getStorage()->read('auth_login')));
         parent::execute();
         if ($this->layout) {
             $this->layout->assign('error', $this->view->getVars('error'));
@@ -30,8 +31,6 @@ class webasystLoginAction extends waLoginAction
             $this->getStorage()->remove('login_back_on_cancel');
         }
         $this->view->assign('back_on_cancel', wa()->getStorage()->read('login_back_on_cancel'));
-        $this->view->assign('login', waRequest::post('login', $this->getStorage()->read('auth_login')));
-
     }
 
     protected function saveReferer()
@@ -49,9 +48,6 @@ class webasystLoginAction extends waLoginAction
         $this->getStorage()->remove('auth_login');
         $redirect = $this->getConfig()->getCurrentUrl();
         $backend_url = $this->getConfig()->getBackendUrl(true);
-        if (waRequest::isMobile()) {
-            $this->redirect(array('url' => $backend_url));
-        }
         if (!$redirect || $redirect === $backend_url) {
             $redirect = $this->getUser()->getLastPage();
         }

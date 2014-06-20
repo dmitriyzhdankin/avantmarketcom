@@ -4,13 +4,13 @@
 
 {else}
 
-    <h3>[`Bill to`]</h3>
+    <h3>[`Ship to`]</h3
     <p>{$contact.name|escape}<br>
     {$shipping_address.value}</p>
     
-    <div style="display:none"><h3>[`Ship to`]</h3>
+    <h3>[`Bill to`]</h3>
     <p>{$contact.name|escape}<br>
-    {$billing_address.value}</p></div>
+    {$billing_address.value}</p>
 
     <table class="table">
         <tr>
@@ -22,34 +22,25 @@
             <th class="align-right">[`Total`]</th>
         </tr>
         {foreach $items as $item}
-       
         <tr{if $item.type == 'service'} class="service"{/if}>
-            <td> 
-            {if $item.type == 'service'}+ {/if}{$item.name|escape}</td>
-            <td class="align-right"><span class="gray">
-            {if $wa->user()->getName() and $item.sku.purchase_price gt 0}
-            {shop_currency($item.sku.purchase_price)}{else}{shop_currency($item.price)}{/if}
-                  x</span> {$item.quantity}</td>
+            <td>{if $item.type == 'service'}+ {/if}{$item.name|escape}</td>
+            <td class="align-right"><span class="gray">{shop_currency($item.price, $item.currency)} x</span> {$item.quantity}</td>
             {if $tax > 0} 
-                <td class="align-right">
-                {if isset($item.tax)}{shop_currency($item.tax, true)}{else}&ndash;{/if}</td>
+                <td class="align-right">{if isset($item.tax)}{shop_currency($item.tax, true)}{else}&ndash;{/if}</td>
             {/if}
-            <td class="align-right">
-            {if $wa->user()->getName() and $item.sku.purchase_price gt 0}{shop_currency($item.sku.purchase_price * $item.quantity, $item.currency)}
-            {else}{shop_currency($item.price * $item.quantity, $item.currency)}{/if}
-            </td>
+            <td class="align-right">{shop_currency($item.price * $item.quantity, $item.currency)}</td>
         </tr>
         {/foreach}
         {if $tax > 0}{$colspan=3}{else}{$colspan=2}{/if}
-       <tr class="no-border thin" style="display:none;">
+        <tr class="no-border thin">
             <td colspan="{$colspan}" class="align-right">[`Subtotal`]</td>
             <td class="align-right">{shop_currency($subtotal, true)}</td>
         </tr>
-        <tr class="no-border thin" style="display:none;">
+        <tr class="no-border thin">
             <td colspan="{$colspan}" class="align-right">[`Discount`]</td>
             <td class="align-right">&minus; {shop_currency($discount, true)}</td>
         </tr>
-        <tr class="no-border thin" style="display:none;">
+        <tr class="no-border thin">
             <td colspan="{$colspan}" class="align-right">[`Shipping`]</td>
             <td class="align-right">{shop_currency($shipping, true)}</td>
         </tr>

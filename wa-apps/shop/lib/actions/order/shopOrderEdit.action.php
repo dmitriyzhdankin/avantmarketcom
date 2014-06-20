@@ -27,10 +27,17 @@ class shopOrderEditAction extends waViewAction
             $currency = $order['currency'];
             if ($order['contact_id']) {
                 $has_contacts_rights = shopHelper::getContactRights($order['contact_id']);
+                
+
                 $shipping_address = shopHelper::getOrderAddress($order['params'], 'shipping');
+
                 if (!empty($order['contact_id'])) {
                     try {
-                        $form = shopHelper::getCustomerForm($order['contact_id']);
+                        $c = new waContact($order['contact_id']);
+                        if ($shipping_address) {
+                            $c['address.shipping'] = $shipping_address;
+                        }
+                        $form = shopHelper::getCustomerForm($c);
                     } catch (waException $e) {
                         // Contact does not exist; ignore. When $form is null, customer data saved in order is shown.
                     }
@@ -54,6 +61,13 @@ class shopOrderEditAction extends waViewAction
 
         $count_new = $this->order_model->getStateCounters('new');
 
+        /**
+         * Backend order edit page
+         * @event backend_order_edit
+         * @param array $order
+         * @return array[string][string] $return[%plugin_id%] html output
+         */
+        $this->view->assign('backend_order_edit', wa()->event('backend_order_edit', $order));
 
         $this->view->assign(array(
             'form'     => $form,
@@ -64,6 +78,8 @@ class shopOrderEditAction extends waViewAction
             'taxes_count' => $taxes_count,
             'shipping_address' => $shipping_address,
             'has_contacts_rights' => $has_contacts_rights,
+            'customer_validation_disabled' => wa()->getSetting('disable_backend_customer_form_validation'),
+            'ignore_stock_count' => wa()->getSetting('ignore_stock_count')
         ));
     }
 
@@ -85,9 +101,36 @@ class shopOrderEditAction extends waViewAction
         }
         $sku_stocks = $this->getSkuStocks(array_unique($sku_ids));
 
-        foreach ($order['items'] as &$item) {
-            $this->workupItems($item, $sku_stocks);
+        $subtotal = 0;
+        $product_ids = array();
+
+        foreach ($order['items'] as $i) {
+            $product_ids[] = $i['id'];
+            $subtotal += $i['item']['price'] * $i['item']['quantity'];
         }
+        $order['subtotal'] = $subtotal;
+        $product_ids = array_unique($product_ids);
+        $feature_model = new shopFeatureModel();
+        $f = $feature_model->getByCode('weight');
+        if (!$f) {
+            $values = array();
+        } else {
+            $values_model = $feature_model->getValuesModel($f['type']);
+            $values = $values_model->getProductValues($product_ids, $f['id']);
+        }
+
+        foreach ($order['items'] as &$item) {
+            if (isset($values['skus'][$item['item']['sku_id']])) {
+                $w = $values['skus'][$item['item']['sku_id']];
+            } else {
+                $w = isset($values[$item['id']]) ? $values[$item['id']] : 0;
+            }
+            $this->workupItems($item, $sku_stocks);
+            $item['quantity'] = $item['item']['quantity'];
+            $item['weight'] = $w;
+        }
+        unset($item);
+
         return $order;
     }
 
@@ -123,24 +166,29 @@ class shopOrderEditAction extends waViewAction
                 $size
             );
         }
+
+        // aggregated stocks count icon for product
         if (empty($item['fake'])) {
             $item['icon'] = shopHelper::getStockCountIcon($item['count'], null, true);
         }
+
         foreach ($item['skus'] as &$sku) {
             if (empty($sku['fake'])) {
-
+                // detaled stocks count icon for sku
                 if (empty($sku_stocks[$sku['id']])) {
                     $sku['icon'] = shopHelper::getStockCountIcon($sku['count'], null, true);
                 } else {
                     $icons = array();
                     foreach ($sku_stocks[$sku['id']] as $stock_id => $stock) {
-                        $icon  = &$icons[];
+                        $icon  = &$icons[$stock_id];
                         $icon  = shopHelper::getStockCountIcon($stock['count'], $stock_id)." ";
                         $icon .= $stock['count']." ";
-                        $icon .= "@".htmlspecialchars($stock['name']);
+                        $icon .= "<span class='small'>@".htmlspecialchars($stock['name'])."</span>";
                         unset($icon);
                     }
-                    $sku['icon'] = implode(', ', $icons);
+                    //$sku['icon'] = implode(', ', $icons);
+                    $sku['icon'] = shopHelper::getStockCountIcon($sku['count'], null, true);
+                    $sku['icons'] = $icons;
                 }
             }
         }

@@ -6,7 +6,7 @@ class shopCartItemsModel extends waModel
 
     public function total($code)
     {
-		$user = wa()->getUser();
+	$user = wa()->getUser();
         if($user['id']) {
 		$sql = "SELECT SUM( COALESCE(NULLIF(s.purchase_price,0.0000), s.primary_price) * c.quantity) FROM ".$this->table." c
                 JOIN shop_product_skus s ON c.sku_id = s.id
@@ -14,75 +14,83 @@ class shopCartItemsModel extends waModel
 		
         $products_total = $this->query($sql, array('code' => $code))->fetchField();	
 		
-		 } else { 
-	     $sql = "SELECT SUM(s.primary_price * c.quantity) FROM ".$this->table." c
+        } else { 
+            $sql = "SELECT SUM(s.primary_price * c.quantity) FROM ".$this->table." c
                 JOIN shop_product_skus s ON c.sku_id = s.id
                 WHERE c.code = s:code AND type = 'product'";
-        $products_total = $this->query($sql, array('code' => $code))->fetchField();	
-			 
-			 }		
+            $products_total = $this->query($sql, array('code' => $code))->fetchField();
+
+        }		
 
         $services_total = 0;
-        $sql = "SELECT c.*, s.price FROM ".$this->table." c JOIN
+        $sql = "SELECT c.*, s.price, s.currency FROM ".$this->table." c JOIN
         shop_service s ON c.service_id = s.id WHERE c.code = s:code AND type = 'service'";
         $services = $this->query($sql, array('code' => $code))->fetchAll();
         if (!$services) {
             return shop_currency($products_total, wa('shop')->getConfig()->getCurrency(true), null, false);
         }
+
         $variant_ids = array();
         $product_ids = array();
+        $sku_ids = array();
         foreach ($services as $s) {
             if ($s['service_variant_id']) {
                 $variant_ids[] = $s['service_variant_id'];
             }
             $product_ids[] = $s['product_id'];
+            if ($s['currency'] == '%') {
+                $sku_ids[] = $s['sku_id'];
+            }
         }
         $variant_ids = array_unique($variant_ids);
         $product_ids = array_unique($product_ids);
+        $sku_ids = array_unique($sku_ids);
+
         // get variant settings
         $variants_model = new shopServiceVariantsModel();
-        $variants = $variants_model->getById($variant_ids);
+        $variants = $variants_model->getWithPrice($variant_ids);
         // get products/skus settings
         $product_services_model = new shopProductServicesModel();
         $products_services = $product_services_model->getByProducts($product_ids, true);
 
+        if ($sku_ids) {
+            $sku_model = new shopProductSkusModel();
+            $sku_prices = $sku_model->getPrices($sku_ids);
+        }
+
+        $primary = wa('shop')->getConfig()->getCurrency();
+
         foreach ($services as $s) {
             $p_id = $s['product_id'];
-            $sku_id = $s['product_id'];
+            $sku_id = $s['sku_id'];
             $s_id = $s['service_id'];
             $v_id = $s['service_variant_id'];
             $p_services = isset($products_services[$p_id]) ? $products_services[$p_id] : array();
 
-            if (!$v_id) {
-                if (!empty($p_services['skus'][$sku_id][$s_id]['primary_price'])) {
-                    $s['price'] = $p_services['skus'][$sku_id][$s_id]['primary_price'];
-                } elseif (!empty($p_services[$s_id]['primary_price'])) {
-                    $s['price'] = $p_services[$s_id]['primary_price'];
-                }
+            $s['price'] = $variants[$v_id]['price'];
+
+            // price variant for sku
+            if (!empty($p_services['skus'][$sku_id][$s_id]['variants'][$v_id]['price'])) {
+                $s['price'] = $p_services['skus'][$sku_id][$s_id]['variants'][$v_id]['price'];
+            }
+
+            if ($s['currency'] == '%') {
+                $s['price'] = $s['price'] * $sku_prices[$sku_id] / 100;
             } else {
-                // base price of variant
-                if (!empty($variants[$v_id]['primary_price'])) {
-                    $s['price'] = $variants[$v_id]['primary_price'];
-                }
-                // price variant for sku
-                if (!empty($p_services['skus'][$sku_id][$s_id]['variants'][$v_id]['price'])) {
-                    $s['price'] = $p_services['skus'][$sku_id][$s_id]['variants'][$v_id]['primary_price'];
-                } elseif (!empty($p_services[$s_id]['variants'][$v_id]['primary_price'])) {
-                    $s['price'] = $p_services[$s_id]['variants'][$v_id]['primary_price'];
-                }
+                $s['price'] = shop_currency($s['price'], $variants[$v_id]['currency'], $primary, false);
             }
 
             $services_total += $s['price'] * $s['quantity'];
         }
 
         $total = $products_total + $services_total;
-        $primary = wa('shop')->getConfig()->getCurrency();
+
         $currency = wa('shop')->getConfig()->getCurrency(false);
         if ($currency != $primary) {
             $currencies = wa('shop')->getConfig()->getCurrencies(array($currency));
             $total = $total / $currencies[$currency]['rate'];
         }
-        return $total;
+        return (float)$total;
     }
 
     public function count($code, $type = null)
@@ -107,16 +115,55 @@ class shopCartItemsModel extends waModel
 
     }
 
+
+    public function getItemByProductAndServices($code, $product_id, $sku_id, $services)
+    {
+        if (!$services) {
+            return $this->getSingleItem($code, $product_id, $sku_id);
+        }
+        $items = array();
+        $rows = $this->getByField(array('code' => $code, 'product_id' => $product_id, 'sku_id' => $sku_id), true);
+        foreach ($rows as $row) {
+            if ($row['type'] == 'product') {
+                if (isset($items[$row['id']])) {
+                    $row['services'] = $items[$row['id']]['services'];
+                }
+                $items[$row['id']] = $row;
+            } else {
+                $items[$row['parent_id']]['services'][$row['service_id']] = $row['service_variant_id'];
+            }
+        }
+        foreach ($items as $item) {
+            if (!isset($item['services']) || count($item['services']) != count($services)) {
+                continue;
+            }
+            $flag = true;
+            foreach ($item['services'] as $s_id => $v_id) {
+                if (!isset($services[$s_id]) || $services[$s_id] != $v_id) {
+                    $flag = false;
+                    break;
+                }
+            }
+            if ($flag) {
+                return $item;
+            }
+        }
+        return null;
+    }
+
     public function getSingleItem($code, $product_id, $sku_id)
     {
         $sql = "SELECT c1.* FROM ".$this->table." c1
                 LEFT JOIN ".$this->table." c2 ON c1.id = c2.parent_id
-                WHERE c1.code = s:0 AND c1.product_id = i:1 AND c1.sku_id = i:2 AND c2.id IS NULL LIMIT 1";
+                WHERE c1.code = s:0 AND c1.type = 'product' AND c1.product_id = i:1 AND c1.sku_id = i:2 AND c2.id IS NULL LIMIT 1";
         return $this->query($sql, $code, $product_id, $sku_id)->fetch();
     }
 
     public function getByCode($code, $full_info = false, $hierarchy = true)
     {
+        if (!$code) {
+            return array();
+        }
         $sql = "SELECT * FROM ".$this->table." WHERE code = s:0 ORDER BY parent_id";
         $items = $this->query($sql, $code)->fetchAll('id');
 
@@ -163,7 +210,7 @@ class shopCartItemsModel extends waModel
             }
 
             foreach ($items as &$item) {
-                if ($item['type'] == 'product') {
+                if ($item['type'] == 'product' && isset($products[$item['product_id']])) {
                     $item['product'] = $products[$item['product_id']];
                     $sku = $skus[$item['sku_id']];
                     $item['sku_code'] = $sku['sku'];
@@ -175,7 +222,7 @@ class shopCartItemsModel extends waModel
                     if ($item['sku_name']) {
                         $item['name'] .= ' ('.$item['sku_name'].')';
                     }
-                } else {
+                } elseif ($item['type'] == 'service' && isset($services[$item['service_id']])) {
                     $item['name'] = $item['service_name'] = $services[$item['service_id']]['name'];
                     $item['currency'] = $services[$item['service_id']]['currency'];
                     $item['service'] = $services[$item['service_id']];
@@ -193,6 +240,11 @@ class shopCartItemsModel extends waModel
                         if ($sku_services[$item['sku_id']][$item['service_variant_id']]['price'] !== null) {
                             $item['price'] = $sku_services[$item['sku_id']][$item['service_variant_id']]['price'];
                         }
+                    }
+                    if ($item['currency'] == '%') {
+                        $p = $items[$item['parent_id']];
+                        $item['price'] = $item['price'] * $p['price'] / 100;
+                        $item['currency'] = $p['currency'];
                     }
                 }
             }
@@ -230,5 +282,25 @@ class shopCartItemsModel extends waModel
         JOIN shop_product p ON c.product_id = p.id JOIN shop_product_skus s ON c.sku_id = s.id
         WHERE c.code = s:code AND c.id = i:id";
         return $this->query($sql, array('code' => $code, 'id' => $id))->fetch();
+    }
+
+    public function getNotAvailableProducts($code, $check_count)
+    {
+        $sql = "SELECT c.id, s.available, s.count, p.name, s.name sku_name FROM ".$this->table." c
+                JOIN shop_product p ON c.product_id = p.id
+                JOIN shop_product_skus s ON c.sku_id = s.id
+                WHERE c.type = 'product' AND c.code = s:code AND ";
+        if ($check_count) {
+            $sql .= '(s.available = 0 OR (s.count IS NOT NULL AND c.quantity > s.count))';
+        } else {
+            $sql .= 's.available = 0';
+        }
+        return $this->query($sql, array('code' => $code))->fetchAll();
+    }
+
+
+    public function deleteByProducts($product_ids)
+    {
+        return $this->deleteByField('product_id', $product_ids);
     }
 }

@@ -31,10 +31,44 @@ class shopHelper
         return $icon;
     }
 
-    public static function getPaymentMethods()
+    public static function getPaymentMethods($order = array())
     {
         $plugin_model = new shopPluginModel();
-        return $plugin_model->listPlugins(shopPluginModel::TYPE_PAYMENT);
+        $methods = $plugin_model->listPlugins(shopPluginModel::TYPE_PAYMENT);
+        $order_params = $order ? $order['params'] : array();
+        $order = new waOrder(array(
+            'contact_id' => $order ? $order['contact_id'] : null,
+            'contact'    => $order ? new waContact($order['contact_id']) : null,
+            'params'     => $order_params
+        ));
+        foreach ($methods as $m_id => $m) {
+            $plugin = shopPayment::getPlugin($m['plugin'], $m['id']);
+            $custom_fields = $plugin->customFields($order);
+            if ($custom_fields) {
+                $params = array();
+                $params['namespace'] = 'payment_'.$m['id'];
+                $params['title_wrapper'] = '%s';
+                $params['description_wrapper'] = '<br><span class="hint">%s</span>';
+                $params['control_wrapper'] = '<div class="name">%s</div><div class="value">%s %s</div>';
+
+                $controls = array();
+                foreach ($custom_fields as $name => $row) {
+                    $row = array_merge($row, $params);
+                    if (!empty($order_params['payment_id']) && ($m['id'] == $order_params['payment_id']) && isset($order_params['payment_params_'.$name])) {
+                        $row['value'] = $order_params['payment_params_'.$name];
+                    }
+                    $controls[$name] = waHtmlControl::getControl($row['control_type'], $name, $row);
+                }
+                if ($controls) {
+                    $custom_html = '';
+                    foreach ($controls as $c) {
+                        $custom_html .= '<div class="field">'.$c.'</div>';
+                    }
+                    $methods[$m_id]['custom_html'] = $custom_html;
+                }
+            }
+        }
+        return $methods;
     }
 
     public static function getDisabledMethods($type, $id)
@@ -60,31 +94,110 @@ class shopHelper
         return $result;
     }
 
-    public static function getShippingMethods($address = null, $items = array())
+    /**
+     *
+     * Get available shipping methods and rates
+     * @param array $address
+     * @param array $items array of package items
+     * @param array[string]double $items['weight'] package item weight in base unit
+     * @param array[string]int $items['quantity']
+     * @param array[string]double $items['price'] package item price in default currency
+     * @param array $params optional params
+     * @param array[string]string $params['currency'] result currency code
+     * @param array[string]double $params['total_price'] precalculated total package price
+     * @param array[string]int $params['payment'] selected payment instance ID
+     * @return array[integer]
+     */
+    public static function getShippingMethods($address = null, $items = array(), $params = array())
     {
         $plugin_model = new shopPluginModel();
-        $methods = $plugin_model->listPlugins(shopPluginModel::TYPE_SHIPPING);
+        $options = array();
+        if (!empty($params[shopPluginModel::TYPE_PAYMENT])) {
+            $options[shopPluginModel::TYPE_PAYMENT] = $params[shopPluginModel::TYPE_PAYMENT];
+        }
+        $methods = $plugin_model->listPlugins(shopPluginModel::TYPE_SHIPPING, $options);
         if ($address !== null) {
+            $config = wa('shop')->getConfig();
+            /**
+             * @var $config shopConfig
+             */
             $result = array();
+            $currency = isset($params['currency']) ? $params['currency'] : $config->getCurrency();
+            $dimensions = shopDimension::getInstance();
             foreach ($methods as $m) {
-                $plugin = shopShipping::getPlugin($m['plugin'], $m['id']);
-                $rates = $plugin->getRates($items, $address ? $address : array());
-                if (is_array($rates)) {
-                    foreach ($rates as $rate_id => $info) {
-                        if (is_array($info)) {
-                            $result[$m['id'].'.'.$rate_id] = array(
-                                'plugin' => $m['plugin'],
-                                'name'   => $m['name'].(!empty($info['name']) ? ' ('.$info['name'].')' : ''),
-                                'rate'   => round(is_array($info['rate']) ? max($info['rate']) : $info['rate'], 2)
+                if ($m['available']) {
+                    $plugin = shopShipping::getPlugin($m['plugin'], $m['id']);
+                    $plugin_info = $plugin->info($m['plugin']);
+                    $plugin_currency = (array)$plugin->allowedCurrency();
+
+                    $total = null;
+                    if($plugin_currency != $currency){
+                        if(!$config->getCurrencies($plugin_currency)){
+                            $result[$m['id']] = array(
+                                'plugin'   => $m['plugin'],
+                                'logo'     => $m['logo'],
+                                'icon'     => $plugin_info['icon'],
+                                'img'      => $plugin_info['img'],
+                                'name'     => $m['name'],
+                                'error'    => sprintf(_w('Shipping rate was not calculated because required currency %s is not defined in your store settings.'), implode(', ',$plugin_currency)),
+                                'rate'     => '',
+                                'currency' => $currency,
                             );
+                            continue;
                         }
                     }
-                } else {
-                    $result[$m['id']] = array(
-                        'plugin' => $m['plugin'],
-                        'name'   => $m['name'],
-                        'rate'   => ''
-                    );
+                    if (isset($params['total_price'])) {
+                        if (!in_array($currency,$plugin_currency)) {
+                            $total = shop_currency($params['total_price'], $currency, reset($plugin_currency), false);
+                        } else {
+                            $total = $params['total_price'];
+                        }
+                    } else {
+                        foreach ($items as $item) {
+                            if (!empty($item['price'])) {
+                                $total += $item['price'] * (isset($item['quantity']) ? $item['quantity'] : 1);
+                            }
+                            if ($total && !in_array($currency,$plugin_currency)) {
+                                $total = shop_currency($total, $currency, reset($plugin_currency), false);
+                            }
+                        }
+                    }
+                    $weight_unit = $plugin->allowedWeightUnit();
+                    foreach ($items as & $item) {
+                        if (!empty($item['weight'])) {
+                            $item['weight'] = $dimensions->convert($item['weight'], 'weight', $weight_unit);
+                        }
+                    }
+                    unset($item);
+                    $rates = $plugin->getRates($items, $address ? $address : array(), $total ? array('total_price' => $total) : array());
+                    if (is_array($rates)) {
+                        foreach ($rates as $rate_id => $info) {
+                            if (is_array($info)) {
+                                $rate = is_array($info['rate']) ? max($info['rate']) : $info['rate'];
+                                $rate = (float) shop_currency($rate, reset($plugin_currency), $currency, false);
+                                $result[$m['id'].'.'.$rate_id] = array(
+                                    'plugin'   => $m['plugin'],
+                                    'logo'     => $m['logo'],
+                                    'icon'     => $plugin_info['icon'],
+                                    'img'      => $plugin_info['img'],
+                                    'name'     => $m['name'].(!empty($info['name']) ? ' ('.$info['name'].')' : ''),
+                                    'rate'     => $rate,
+                                    'currency' => $currency,
+                                );
+                            }
+                        }
+                    } elseif (is_string($rates)) {
+                        $result[$m['id']] = array(
+                            'plugin'   => $m['plugin'],
+                            'logo'     => $m['logo'],
+                            'icon'     => $plugin_info['icon'],
+                            'img'      => $plugin_info['img'],
+                            'name'     => $m['name'],
+                            'error'    => $rates,
+                            'rate'     => '',
+                            'currency' => $currency,
+                        );
+                    }
                 }
             }
             return $result;
@@ -107,7 +220,7 @@ class shopHelper
             $key = ifempty($order['params'][$type.'_id']);
             try {
                 if (!empty($key) && ($plugin = shopPayment::getPlugin(null, $key)) && method_exists($plugin, 'getPrintForms')) {
-                    $forms = $plugin->getPrintForms();
+                    $forms = $plugin->getPrintForms(shopPayment::getOrderData($order));
                     foreach ($forms as $id => $form) {
                         $plugins["{$type}.{$id}"] = $form;
                     }
@@ -119,7 +232,7 @@ class shopHelper
             $key = ifempty($order['params'][$type.'_id']);
             try {
                 if (!empty($key) && ($plugin = shopShipping::getPlugin(null, $key)) && method_exists($plugin, 'getPrintForms')) {
-                    $forms = $plugin->getPrintForms();
+                    $forms = $plugin->getPrintForms(shopPayment::getOrderData($order));
                     foreach ($forms as $id => $form) {
                         $plugins["{$type}.{$id}"] = $form;
                     }
@@ -169,9 +282,8 @@ class shopHelper
      * Get either a Gravatar URL or complete image tag for a specified email address.
      *
      * @param string $email The email address
-     * @param string $size Size in pixels, defaults to 50
+     * @param int $size Size in pixels, defaults to 50
      * @param string $default Default imageset to use [ custom | 404 | mm | identicon | monsterid | wavatar ]
-     * @param string $rating Maximum rating (inclusive) [ g | pg | r | x ]
      * @return String containing either just a URL or a complete image tag
      * @source http://gravatar.com/site/implement/images/php/
      */
@@ -181,7 +293,7 @@ class shopHelper
             $default = wa()->getRootUrl(true).'wa-content/img/userpic'.$size.'.jpg';
             $default = urlencode($default);
         }
-        return 'http://www.gravatar.com/avatar/'.md5(strtolower(trim($email)))."?size=$size&default=$default";
+        return '//www.gravatar.com/avatar/'.md5(strtolower(trim($email)))."?size=$size&default=$default";
     }
 
     public static function workupOrders(&$orders, $single = false)
@@ -190,7 +302,7 @@ class shopHelper
             $orders = array($orders);
         }
 
-        $items_count = 4;
+
         $currency = wa('shop')->getConfig()->getCurrency();
 
         $workflow = new shopWorkflow();
@@ -202,25 +314,6 @@ class shopHelper
                 $order['create_datetime_str'] = wa_date('humandatetime', $order['create_datetime']);
             }
             $state = isset($states[$order['state_id']]) ? $states[$order['state_id']] : null;
-
-            if (!empty($order['items'])) {
-                $items_str = '';
-                $i = 0;
-                foreach ($order['items'] as $item) {
-                    if ($i >= $items_count) {
-                        break;
-                    }
-                    $items_str .= ', '.$item['name'];
-                    if ($item['type'] == 'product') {
-                        $items_str .= ' x '.$item['quantity'];
-                    }
-                    $i += 1;
-                }
-                $order['items_str'] = substr($items_str, 2);
-            }
-            if (!$single && isset($order['items'])) {
-                unset($order['items']);
-            }
 
             $icon = '';
             $style = '';
@@ -279,9 +372,9 @@ class shopHelper
             foreach (array('country', 'region', 'zip', 'city', 'street') as $k) {
                 if (!isset($address[$k])) {
                     continue;
-                } else if ($k == 'country') {
+                } elseif ($k == 'country') {
                     $address_f[$k] = waCountryModel::getInstance()->name(ifempty($address['country']));
-                } else if ($k == 'region') {
+                } elseif ($k == 'region') {
                     $address_f['region'] = '';
                     if (!empty($address['country']) && !empty($address['region'])) {
                         $model = new waRegionModel();
@@ -349,7 +442,12 @@ class shopHelper
         return $icon;
     }
 
-    public static function getCustomerForm($id = null)
+    /**
+     * @param int|waContact $id
+     * @param bool $ensure_address
+     * @return waContactForm
+     */
+    public static function getCustomerForm($id = null, $ensure_address = false)
     {
         $settings = wa('shop')->getConfig()->getCheckoutSettings();
         if (!isset($settings['contactinfo'])) {
@@ -357,14 +455,44 @@ class shopHelper
         }
 
         $fields_config = ifset($settings['contactinfo']['fields'], array());
+        $address_config = ifset($fields_config['address'], array());
         unset($fields_config['address']);
+
+        if (wa()->getEnv() == 'backend') {
+            // new order
+            if (!isset($fields_config['address.shipping']) || !$id) {
+                $fields_config['address.shipping'] = array();
+            }
+            // edit order
+            elseif (!empty($fields_config['address.shipping']) && $id && $id instanceof waContact) {
+                $address = $id->getFirst('address.shipping');
+                if ($address && !empty($address['data'])) {
+                    foreach ($address['data'] as $subfield => $v) {
+                        if (!isset($fields_config['address.shipping']['fields'][$subfield])) {
+                            $fields_config['address.shipping']['fields'][$subfield] = array();
+                        }
+                    }
+                }
+            }
+        }
+
+        if ($ensure_address && !isset($fields_config['address.billing']) && !isset($fields_config['address.shipping'])) {
+            $fields_config['address'] = $address_config;
+        }
+
         $form = waContactForm::loadConfig($fields_config, array(
             'namespace' => 'customer'
         ));
         if ($id) {
-            $contact = new waContact($id);
-            $contact->getName(); // make sure contact exists; throws exception otherwise
-            $form->setValue($contact);
+            if (is_numeric($id)) {
+                $contact = new waContact($id);
+                $contact->getName(); // make sure contact exists; throws exception otherwise
+            } elseif ($id instanceof waContact) {
+                $contact = $id;
+            }
+            if (isset($contact)) {
+                $form->setValue($contact);
+            }
         }
         return $form;
     }
@@ -377,20 +505,20 @@ class shopHelper
      */
     public static function transliterate($str, $strict = true)
     {
-        $str = preg_replace('/\s+/', '-', $str);
+        $str = preg_replace('/\s+/u', '-', $str);
         if ($str) {
             foreach (waLocale::getAll() as $lang) {
                 $str = waLocale::transliterate($str, $lang);
             }
         }
         $str = preg_replace('/[^a-zA-Z0-9_-]+/', '', $str);
-        if ($strict && !$str) {
+        if ($strict && !strlen($str)) {
             $str = date('Ymd');
         }
         return strtolower($str);
     }
 
-    public static function getContactRights($contact_id=null)
+    public static function getContactRights($contact_id = null)
     {
         $rights = false;
         if (wa()->appExists('contacts')) {

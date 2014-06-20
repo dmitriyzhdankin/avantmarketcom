@@ -19,12 +19,16 @@ class shopWorkflowAction extends waWorkflowAction
         if (isset($options['state'])) {
             $this->state_id = $options['state'];
         }
+
+        if (empty($this->options['log_record'])) {
+            $this->options['log_record'] = $this->getName();
+        }
     }
 
     public function getDefaultOptions()
     {
         return array(
-            'html' => false
+            'html' => false,
         );
     }
 
@@ -62,10 +66,7 @@ class shopWorkflowAction extends waWorkflowAction
      */
     public function execute($oder_id = null)
     {
-        if ($this->state_id) {
-            return true;
-        }
-        return null;
+        return true;
     }
 
     public function postExecute($order_id = null, $result = null)
@@ -93,7 +94,7 @@ class shopWorkflowAction extends waWorkflowAction
         }
 
         $order_log_model = new shopOrderLogModel();
-        $order_log_model->add($data);
+        $data['id'] = $order_log_model->add($data);
 
         $update = isset($result['update']) ? $result['update'] : array();
         $update['update_datetime'] = date('Y-m-d H:i:s');
@@ -103,10 +104,11 @@ class shopWorkflowAction extends waWorkflowAction
         }
         $order_model->updateById($order['id'], $update);
 
+        $order_params_model = new shopOrderParamsModel();
         if (isset($update['params'])) {
-            $order_params_model = new shopOrderParamsModel();
             $order_params_model->set($order['id'], $update['params'], false);
         }
+        $order['params'] = $order_params_model->get($order_id);
         // send notifications
         shopNotifications::send('order.'.$this->getId(), array(
             'order' => $order,
@@ -114,6 +116,25 @@ class shopWorkflowAction extends waWorkflowAction
             'status' => $this->getWorkflow()->getStateById($data['after_state_id'])->getName(),
             'action_data' => $data
         ));
+
+        /**
+         * @event order_action.callback
+         * @event order_action.pay
+         * @event order_action.ship
+         * @event order_action.process
+         * @event order_action.delete
+         * @event order_action.restore
+         * @event order_action.complete
+         * @event order_action.comment
+         *
+         * @param array[string]mixed $data
+         * @param array[string]int $data['order_id']
+         * @param array[string]int $data['action_id']
+         * @param array[string]int $data['before_state_id']
+         * @param array[string]int $data['after_state_id']
+         * @param array[string]int $data['id'] Order log record id
+         */
+        wa('shop')->event('order_action.'.$this->getId(), $data);
         return $data;
     }
 

@@ -2,10 +2,10 @@
 
 /**
  *
- * @property region
- * @property halfkilocost
- * @property currency
- * @property overhalfkilocost
+ * @property $region
+ * @property $halfkilocost
+ * @property $currency
+ * @property $overhalfkilocost
  * @property $caution
  * @property $max_weight
  * @property $complex_calculation_weight
@@ -77,10 +77,6 @@ class russianpostShipping extends waShipping
         $control = '';
 
         waHtmlControl::addNamespace($params, $name);
-
-        $cm = new waCountryModel();
-
-        $countries = $cm->all();
 
         $rm = new waRegionModel();
         if ($regions = $rm->getByCountry('rus')) {
@@ -226,7 +222,7 @@ class russianpostShipping extends waShipping
         return $services;
     }
 
-    public function getPrintForms()
+    public function getPrintForms(waOrder $order = null)
     {
         return extension_loaded('gd') ? array(
             113 => array(
@@ -423,7 +419,7 @@ class russianpostShipping extends waShipping
 
     public function tracking($tracking_id = null)
     {
-        return 'Отслеживание отправления: <a href="http://emspost.ru/ru/tracking/?id='.$tracking_id.'" target="_blank">http://emspost.ru/ru/tracking/?id='.$tracking_id.'</a>';
+        return 'Отслеживание отправления: <a href="http://www.russianpost.ru/rp/servise/ru/home/postuslug/trackingpo" target="_blank">http://www.russianpost.ru/rp/servise/ru/home/postuslug/trackingpo</a>';
     }
 
     public function allowedCurrency()

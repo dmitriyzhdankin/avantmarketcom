@@ -71,12 +71,12 @@ final class waDbStatement
 
     /**
      * Preparing query to the next operations
-     * @throws waDbException
+     * @throws waException
      */
     private function prepareQuery()
     {
         if ($this->query == '') {
-            throw new waDbException('Empty query');
+            throw new waException('Empty query');
         }
 
         $matches = array();
@@ -86,7 +86,7 @@ final class waDbStatement
             foreach ($matches[0] as $id => $match) {
                 $match[2] = $matches[1][$id][0];
                 $match[3] = $matches[2][$id][0];
-                if (!$match[2] && $match[3][0] === ':' && (is_numeric(substr($this->query, $match[1] - 1, 1)))) {
+                if (preg_match('/[a-z0-9]/i', substr($this->query, $match[1] - 1, 1))) {
                     continue;
                 }
                 $p_name = ($match[3][0] === ':') ? ltrim($match[3], ':') : $unnamed_count++;
@@ -173,7 +173,7 @@ final class waDbStatement
                      var_export($this->places_map, true) . "\n" .
                      "Bind params: \n" .
                      var_export($this->binded_params, true) . "\n";
-            throw new Exception($error);
+            throw new waException($error);
         }
         return true;
     }
@@ -181,20 +181,20 @@ final class waDbStatement
     /**
      * @param mixed $param
      * @param mixed $value
-     * @throws Exception
+     * @throws waException
      * @return bool
      */
     public function bindParam($param, &$value)
     {
         if(!is_string($param) && !is_integer($param)) {
-            throw new Exception('Illegal name/place of the placeholder.');
+            throw new waException('Illegal name/place of the placeholder.');
         }
         if (is_object($value) || is_array($value)) {
-            throw new Exception('Illegal value of the placeholder.');
+            throw new waException('Illegal value of the placeholder.');
         }
 
         if(isset($this->places_map[$param])) {
-            $this->binded_params[$param] = &$value;
+            $this->binded_params[$param] = $value;
             return true;
         }
 
@@ -203,13 +203,13 @@ final class waDbStatement
 
     /**
      * @param $params_array
-     * @throws Exception
+     * @throws waException
      * @return bool
      */
     public function bindArray($params_array)
     {
         if (!is_array($params_array)) {
-            throw new Exception('Invalid arguments passed');
+            throw new waException('Invalid arguments passed');
         }
 
         foreach ($params_array as $param => $value){

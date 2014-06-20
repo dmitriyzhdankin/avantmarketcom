@@ -33,7 +33,10 @@ $(function() {
                     function(html) {
                         if (html) {
                             var rendered = $('<div></div>').html(html);
-                            html = rendered.find('.stream-wrapper ul').html();
+                            if ($.Retina) {
+                                rendered.find('.stream-wrapper .photostream li:not(.dummy) img').retina();
+                            }
+                            html = rendered.find('.stream-wrapper ul').children();
                             rendered.remove();
                             self.trigger('append', html);
                             $.photos.onLoadTail();
@@ -71,7 +74,10 @@ $(function() {
                     function(html) {
                         if (html) {
                             var rendered = $('<div></div>').html(html);
-                            html = rendered.find('.stream-wrapper ul').html();
+                            if ($.Retina) {
+                                rendered.find('.stream-wrapper .photostream li:not(.dummy) img').retina();
+                            }
+                            html = rendered.find('.stream-wrapper ul').children();
                             rendered.remove();
                             self.trigger('prepend', html);
                             $.photos.onLoadHead();
@@ -92,8 +98,12 @@ $(function() {
             this.options = options;
             $.photos.hotkey_manager.set();
             $.photos.renderMap();
+            if ($.Retina) {
+                $('#photo').retina();
+            }
             this.onInit();
         },
+        onInit: function() {},
         onLoadTail: function() {},
         onLoadHead: function() {},
         hotkey_manager: (function() {
@@ -107,11 +117,11 @@ $(function() {
                 { 
                     return; 
                 }
-                if (code == 39) {
+                if (code == 39 && !e.altKey) {
                     $.photos.goToNextPhoto();
                     arrowsHandlerDown.hold = true;
                 }
-                if (code == 37) {
+                if (code == 37 && !e.altKey) {
                     $.photos.goToPrevPhoto();
                     arrowsHandlerDown.hold = true;
                 }
@@ -248,7 +258,7 @@ $(function() {
                     stream.prepend = function(photos) {
                         photos = workup(photos);
                         return prepend.call(this, photos);
-                    }
+                    };
                     
                     stream.append(__photo_stream_data);  // __photo_stream_data comes with photo-stream html block
                     stream.setCurrentById(photo_id);
@@ -447,7 +457,11 @@ $(function() {
                 replaceImg(
                     $('#photo'), 
                     photo.thumb.url + (photo.edit_datetime ? '?' + Date.parseISO(photo.edit_datetime) : ''),
-                    null
+                    function() {
+                        if ($.Retina) {
+                            $(this).retina();
+                        }
+                    }
                 );
                 // than load rest part of photo's info 
                 f.xhr = $.get('loadPhoto',
@@ -487,7 +501,11 @@ $(function() {
                     replaceImg(
                         $('#photo'), 
                         photo.thumb.url + (photo.edit_datetime ? '?' + Date.parseISO(photo.edit_datetime) : ''),
-                        null
+                        function() {
+                            if ($.Retina) {
+                                $(this).retina();
+                            }
+                        }
                     );
                 }
                 
@@ -584,6 +602,38 @@ $(function() {
                 } else {
                     $('#photo-hook-bottom').html(html).show();
                 }
+                
+                // hooks' render top left results
+                html = '';
+                if (data.frontend_photo) {
+                    frontend_photo = data.frontend_photo;
+                    for (var plugin_id in frontend_photo) {
+                       if (frontend_photo[plugin_id].top_left) {
+                           html += frontend_photo[plugin_id].top_left;
+                       }
+                    }
+                }
+                if (!html) {
+                    $('.corner.top.left').hide();
+                } else {
+                    $('.corner.top.left').html(html).show();
+                }
+                
+                // hooks' render sidebar
+                html = '';
+                if (data.frontend_photo) {
+                    frontend_photo = data.frontend_photo;
+                    for (var plugin_id in frontend_photo) {
+                       if (frontend_photo[plugin_id].sidebar) {
+                           html += frontend_photo[plugin_id].sidebar;
+                       }
+                    }
+                }
+                if (!html) {
+                    $('#photo-hook-sidebar').hide();
+                } else {
+                    $('#photo-hook-sidebar').html(html).show();
+                }
             },
             setNextPhotoLink: function() {
                 // set a-link to next
@@ -605,22 +655,50 @@ $(function() {
                 $.photos.photo_stream_cache.prepend(__photo_stream_data);
             },
             
-            goToNextPhoto: function() {
-                var item = this.options.photo_stream;
-                slide_back_needed = false;
-                item.trigger('home', [function() {
-                    item.trigger('forward', [{
-                        steps: 1,
-                        selected_stick: true,
-                        animate: false,
-                        fn: function() {
-                            var next_photo = $.photos.photo_stream_cache.getNext();
-                            if (next_photo) {
-                                $.photos.loadPhotoCompletly(next_photo);
+            goToNextPhoto: function(try_stack_first) {
+                
+                var nextInPhotoStream = function() {
+                    slide_back_needed = false;
+                    var item = this.options.photo_stream;
+                    item.trigger('home', [function() {
+                        item.trigger('forward', [{
+                            steps: 1,
+                            selected_stick: true,
+                            animate: false,
+                            fn: function() {
+                                var next_photo = null;
+                                if (try_stack_first) {
+                                    next_photo = $.photos.photo_stack_cache.getNext();
+                                    if (next_photo) {
+                                        $.photos.loadPhotoInStack(next_photo);
+                                    } else {
+                                        next_photo = $.photos.photo_stream_cache.getNext();
+                                        if (next_photo) {
+                                            $.photos.loadPhotoCompletly(next_photo);
+                                        }
+                                    }
+                                } else {
+                                    next_photo = $.photos.photo_stream_cache.getNext();
+                                    if (next_photo) {
+                                        $.photos.loadPhotoCompletly(next_photo);
+                                    }                                
+                                }
                             }
-                        }
-                    }]);
-                }, false]);
+                        }]);
+                    }, false]);
+                };
+                
+                if (try_stack_first) {
+                    var next_photo = $.photos.photo_stack_cache.getNext();
+                    if (next_photo) {
+                        $.photos.loadPhotoInStack(next_photo);
+                    } else {
+                        nextInPhotoStream.call(this);
+                    }
+                } else {
+                    nextInPhotoStream.call(this);
+                }
+                
             },
             goToPrevPhoto: function() {
                 var item = this.options.photo_stream;
@@ -650,6 +728,9 @@ $(function() {
                     photo.thumb_custom.url, 
                     function() {
                         preload_photo_img.attr('data-photo-id', photo.id);
+                        if ($.Retina) {
+                            $(this).retina();
+                        }
                     }
                 );
             },
@@ -664,13 +745,17 @@ $(function() {
                         if (photo.thumb_custom.size && typeof photo.thumb_custom.size === 'object') {
                             $(this).width(photo.thumb_custom.size.width).height(photo.thumb_custom.size.height);
                         }
+                        if ($.Retina) {
+                            $(this).retina();
+                        }
                     }
                 );
             }
         });
         // click to photo for next
         $('#photo').parents('a:first').click(function() {
-            $.photos.goToNextPhoto();
+            
+            $.photos.goToNextPhoto(true);
             return false;
         });
 
@@ -691,6 +776,10 @@ $(function() {
             });
             return false;
         });
+        
+        if ($.Retina) {
+            photo_stream.find('ul.photostream li:not(.dummy) img').retina();
+        }
 
         // click to arrows in stack-navigation parenl
         var stack_nav = $('#stack-nav');

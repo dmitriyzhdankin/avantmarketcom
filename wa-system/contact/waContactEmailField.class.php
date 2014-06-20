@@ -19,10 +19,10 @@ class waContactEmailField extends waContactStringField
         if (!isset($this->options['validators'])) {
             $this->options['validators'] = new waEmailValidator($this->options, array('required' => _ws('This field is required')));
             $this->options['formats']['js'] = new waContactEmailListFormatter();
-            $this->options['formats']['top'] = new waContactEmailTopFormatter();
+            $this->options['formats']['html'] = $this->options['formats']['top'] = new waContactEmailTopFormatter();
         }
     }
-    
+
     public function set(waContact $contact, $value, $params = array(), $add = false)
     {
         $value = parent::set($contact, $value, $params, $add);
@@ -34,11 +34,46 @@ class waContactEmailField extends waContactStringField
                 }
             }
         } else {
-            if (!isset($v['status'])) {
+            if (is_array($value) && !isset($value['status'])) {
                 $value['status'] = $status;
             }
         }
         return $value;
+    }
+
+    public function validate($data, $contact_id=null)
+    {
+        $errors = parent::validate($data, $contact_id);
+        $email_model = new waContactEmailsModel();
+        $contact_model = new waContactModel();
+        if ($this->isMulti()) {
+            if (!empty($data[0]) && $contact_id) {
+                $c = $contact_model->getById($contact_id);
+                if (!$c['password']) {
+                    return $errors;
+                }
+                $value = $this->format($data[0], 'value');
+                $id = $email_model->getContactWithPassword($value);
+                if ($id && $id != $contact_id) {
+                    $errors[0] = sprintf(_ws('User with the same %s is already registered'), 'email');
+                }
+            }
+        } else {
+            $value = $this->format($data, 'value');
+            if ($value) {
+                if ($contact_id) {
+                    $c = $contact_model->getById($contact_id);
+                    if (!$c['password']) {
+                        return $errors;
+                    }
+                }
+                $id = $email_model->getContactWithPassword($value);
+                if ($id && $id != $contact_id) {
+                    $errors = sprintf(_ws('User with the same %s is already registered'), 'email');
+                }
+            }
+        }
+        return $errors;
     }
 }
 
@@ -76,7 +111,7 @@ class waContactEmailTopFormatter extends waContactFieldFormatter
                 $exts = $f->getParameter('ext');
                 if (isset($exts[$ext])) {
                     $ext = _ws($exts[$ext]);
-                } 
+                }
                 $result .= ' <em class="hint">'.htmlspecialchars($ext).'</em>';
             }
             return $result;

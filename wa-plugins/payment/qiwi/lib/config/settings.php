@@ -1,16 +1,44 @@
 <?php
 return array(
+    'protocol'       => array(
+        'value'        => 'soap',
+        'title'        => 'Способ подключения',
+        'control_type' => 'select',
+        'options'      => array(
+            'soap' => 'SOAP протокол',
+            'rest' => 'REST протокол (новый)',
+        ),
+    ),
     'login'          => array(
         'value'        => '',
         'title'        => 'Идентификатор (логин)',
-        'description'  => '',
+        'description'  => 'Идентификатор магазина (Shop ID)',
         'control_type' => 'input',
     ),
     'password'       => array(
         'value'        => '',
         'title'        => 'Пароль',
-        'description'  => '',
+        'description'  => 'Пароль для SOAP протокола (оставьте поле пустым, если вы не используете этот протокол)',
         'control_type' => 'password',
+    ),
+
+    'api_login'=>array(
+        'value'        => '',
+        'title'        => 'Идентификатор пользователя',
+        'description'  => 'ID ',
+        'control_type' => 'input',
+    ),
+    'api_password'   => array(
+        'value'        => '',
+        'title'        => 'Пароль',
+        'description'  => 'Пароль для REST протокола',
+        'control_type' => 'password',
+    ),
+    'prv_name'       => array(
+        'value'        => '',
+        'title'        => 'Продавец',
+        'description'  => 'Название провайдера, которое будет показано клиенту (произвольная строка до 100 символов)',
+        'control_type' => 'text',
     ),
     'lifetime'       => array(
         'value'        => 24,
@@ -21,7 +49,7 @@ return array(
     'alarm'          => array(
         'value'        => 0,
         'title'        => 'Уведомления',
-        'description'  => 'Параметры отправки уведомлений',
+        'description'  => 'Способ уведомления покупателя о состоянии счета в системе QIWI',
         'control_type' => 'select qiwiPayment::_getAlarmVariants',
     ),
     'prefix'         => array(

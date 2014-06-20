@@ -143,13 +143,14 @@
                 <ul class="skus" id="product-skus">
                     {$product_available = false}
                     {foreach $product.skus as $sku}
-                        {$sku_available = ($sku.available && $sku.count !== 0)}
+                        {$sku_available = ($sku.available)}
                         <li itemprop="offers" itemscope itemtype="http://schema.org/Offer">
                             <label{if !$sku_available} class="disabled"{/if}>
-                                <input name="sku_id" type="radio" value="{$sku.id}"{if !$sku_available} disabled="true"{/if}{if $sku.id == $product.sku_id} checked="checked"{/if} data-price="{shop_currency($sku.price)}"{if $sku.image_id} data-image-id="{$sku.image_id}"{/if}
-                              {if $sku.sku} data-sku="{$sku.sku}"{/if}> {$sku.name}
+                                <input name="sku_id" type="radio" value="{$sku.id}"{if !$sku_available} disabled="true"{/if}{if $sku.id == $product.sku_id} checked="checked"{/if} 
+                                    data-price="{shop_currency($sku.price)}" data-new_price="{shop_currency($sku.purchase_price)}" data-count="{$sku.count}" {if $sku.image_id} data-image-id="{$sku.image_id}"{/if}
+                                    {if $sku.sku} data-sku="{$sku.sku}"{/if}> {$sku.name}
                                 <meta itemprop="price" content="{$sku.price}">
-                                {if $sku.count === 0}
+                                {if !$sku_available}
                                     <em class="nowrap small out-of-stock">[`Out of stock`]</em>
                                     <link itemprop="availability" href="http://schema.org/OutOfStock" />
                                 {else}
@@ -162,49 +163,53 @@
                 </ul>
                 
                 <script>
+                    var avaiable_new_price = '{$wa->user()->getName()}';
+                    var critical_count = parseInt('{$stocks[3].critical_count}'); // shoul be change for each stock
+                    var low_count = parseInt('{$stocks[3].low_count}'); // shoul be change for each stock
+                    
                     $("#product-skus input").click(function () {
                         var sku_id = $(this).val();
                         var sku_image = $(this).attr('data-image-id'); 
-                        var sku_sku = $(this).attr('data-sku'); 
-                        $('#product_sku').html(sku_sku);               
+                        var sku_sku = $(this).attr('data-sku');
+                        var sku_count = $(this).attr('data-count');
+                        var sku_price = $(this).attr('data-price');
+                        var sku_new_price = $(this).attr('data-new_price');
+                        $('#product_sku').html(sku_sku);
+                        
+                        //price
+                        var cur_price = parseFloat(sku_price);
+                        if( avaiable_new_price && parseFloat(sku_new_price) > 0  ) {
+                            cur_price = parseFloat(sku_new_price);
+                            $('.price_new').html(sku_new_price);
+                            $('.price_old').html(sku_price);
+                        } else {
+                            $('.price_new').html(sku_price);
+                            $('.price_old').html('');
+                        }
+                        
+                        //disable | enable "add to card" button
+                        if( cur_price > 0 ) { 
+                        //if( cur_price > 0 && parseInt(sku_count) !== 0 ) { 
+                            $('.bay').removeAttr('disabled').removeAttr('style'); 
+                        } else {
+                            $('.bay').attr('disabled', 'disabled').css('background','#CCC');
+                        }
+                        
+                        // count
+                        var count_html = '';
+                        
+                        if( sku_count === '' || sku_count >= low_count ) {
+                            count_html = 'много';
+                        } else if( sku_count < 1 ) {
+                            count_html = 'нет';
+                        } else if( sku_count >= 1 && sku_count < critical_count ) {
+                            count_html = 'мало';
+                        } else if( sku_count >= critical_count && sku_count < low_count  ) {
+                            count_html = 'средне';
+                        }
+                        $('.availability_sku .availability b').html(count_html);
                     });
                     $("#product-skus input:radio:checked").click();
-            </script>
-                <script>
-//                        var sku_services = {json_encode($sku_services)};
-//                        var service_variant_html = function (id, name, price) {
-//                            return '<option id="service-variant-' + id + '" value="' + id + '">' + name + ' (+' + price + ')</option>';
-//                        }
-//                        $("#product-skus input:radio").click(function () {
-//                            var sku_id = $(this).val();
-//                            for (var service_id in sku_services[sku_id]) {
-//                                var v = sku_services[sku_id][service_id];
-//                                if (v === false) {
-//                                    $("#service-" + service_id).hide().find('input,select').attr('disabled', 'disabled');
-//                                } else {
-//                                    $("#service-" + service_id).show().find('input,select').removeAttr('disabled');
-//                                    if (typeof (v) == 'string') {
-//                                        $("#service-" + service_id + ' .service-price').html(v);
-//                                    } else {
-//                                        var selected_variant_id = 0;
-//                                        for (var variant_id in v) {
-//                                            var obj = $("#service-variant-" + variant_id);
-//                                            if (v[variant_id] === false) {
-//                                                obj.hide();
-//                                            } else {
-//                                                if (!selected_variant_id) {
-//                                                    selected_variant_id = variant_id;
-//                                                }
-//                                                obj.replaceWith(service_variant_html(variant_id, v[variant_id][0], v[variant_id][1]));
-//                                            }
-//                                        }
-//                                        $("#service-" + service_id + ' .service-variants').val(selected_variant_id);
-//                                    }
-//                                }
-//                            }
-//                        });
-//                        $("#product-skus input:radio:checked").click();
-
                 </script>
             {else}
                 {* in case there is only one sku, don't display the selector *}
@@ -233,9 +238,9 @@
 
 						<div class="price">
                         
-                  {if $wa->user()->getName() and $sku.purchase_price gt 0}
-                  <div class="price_new">{shop_currency($sku.purchase_price)}</div><div class="price_old">{shop_currency($product.price)}</div>
-                 {else}<div class="price_new">{shop_currency($product.price)}</div><div class="price_old"></div>{/if}
+                    {if $wa->user()->getName() and $sku.purchase_price gt 0}
+                        <div class="price_new">{shop_currency($sku.purchase_price)}</div><div class="price_old">{shop_currency($sku.price)}</div>
+                    {else}<div class="price_new">{shop_currency($sku.price)}</div><div class="price_old"></div>{/if}
                  
                            
                             

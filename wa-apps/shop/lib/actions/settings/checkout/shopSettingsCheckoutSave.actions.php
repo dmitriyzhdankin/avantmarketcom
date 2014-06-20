@@ -34,6 +34,8 @@ class shopSettingsCheckoutSaveActions extends waJsonActions
                 unset($data[$step_id]);
             }
         }
+        $app_settings_model = new waAppSettingsModel();
+        $app_settings_model->set('shop', 'checkout_flow_changed', time());
         $this->save($data);
     }
 
@@ -56,6 +58,8 @@ class shopSettingsCheckoutSaveActions extends waJsonActions
                 $result[$step_id] = $step;
             }
         }
+        $app_settings_model = new waAppSettingsModel();
+        $app_settings_model->set('shop', 'checkout_flow_changed', time());
         $this->save($result);
     }
 
@@ -86,5 +90,11 @@ class shopSettingsCheckoutSaveActions extends waJsonActions
     protected function save($data)
     {
         waUtils::varExportToFile($data, $this->getConfig()->getConfigPath('checkout.php', true, 'shop'));
+    }
+
+    protected function backendCustomerFormValidationAction()
+    {
+        $asm = new waAppSettingsModel();
+        $asm->set('shop', 'disable_backend_customer_form_validation', waRequest::post('enable') ? null : '1');
     }
 }

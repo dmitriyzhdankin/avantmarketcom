@@ -47,22 +47,28 @@ $.extend($.settings = $.settings || {}, {
 
         var sidebar = $('.s-settings-order-states.sidebar');
         $('#s-delete-state').unbind('click').bind('click', function() {
-            var self = $(this);
-            $.shop.jsonPost(self.attr('href'), { id: options.id }, function(r) {
-                var selected = sidebar.find('li.selected');
-                var prev = selected.prev('.dr');
-                if (prev.length) {
-                    $.settings.dispatch(prev.find('a').attr('href'),  true);
-                } else {
-                    var next = selected.next('.dr');
-                    if (next.length) {
-                        $.settings.dispatch(next.find('a').attr('href'),  true);
-                    } else {
-                        $.settings.dispatch('#/orderStates/',  true);
-                        sidebar.find('li:not(.dr):first').addClass('selected');
+            if (confirm($_('This will delete this order state. Are you sure?'))) {
+                var self = $(this);
+                $.post(self.attr('href'), { id: options.id }, function(r) {
+                    if (r.status == 'ok') {
+                        var selected = sidebar.find('li.selected');
+                        var prev = selected.prev('.dr');
+                        if (prev.length) {
+                            $.settings.dispatch(prev.find('a').attr('href'),  true);
+                        } else {
+                            var next = selected.next('.dr');
+                            if (next.length) {
+                                $.settings.dispatch(next.find('a').attr('href'),  true);
+                            } else {
+                                $.settings.dispatch('#/orderStates/',  true);
+                                sidebar.find('li:not(.dr):first').addClass('selected');
+                            }
+                        }
+                    } else if (r.status == 'fail') {
+                        alert(r.errors);
                     }
-                }
-            });
+                }, "json");
+            }
             return false;
         });
 
@@ -103,6 +109,32 @@ $.extend($.settings = $.settings || {}, {
                 form.find('input.error').removeClass('error');
                 form.find('.errormsg').remove();
             };
+            
+            var showSuccessIcon = function() {
+                var icon = $('#s-settings-order-states-submit').parent().find('i.yes').show();
+                setTimeout(function() {
+                    icon.hide();
+                }, 3000);
+            };
+            var showLoadingIcon = function() {
+                var p = $('#s-settings-order-states-submit').parent();
+                p.find('i.yes').hide();
+                p.find('i.loading').show();
+            };
+            
+            // after update services hash, dispathing and load proper content
+            // 'afterOrderStatesInit' will be called. Extend this handler
+            var prevHandler = $.settings.afterOrderStatesInit;
+            $.settings.afterOrderStatesInit = function() {
+                showSuccessIcon();
+                if (typeof prevHandler == 'function') {
+                    prevHandler();
+                }
+                $.settings.afterOrderStatesInit = prevHandler;
+            };
+            
+            // send post
+            showLoadingIcon();
             $.shop.jsonPost(self.attr('action'), data,
                 function(r) {
                     clear();
@@ -120,7 +152,8 @@ $.extend($.settings = $.settings || {}, {
                         if (!$.isEmptyObject(r.errors.actions)) {
                             for (var id in r.errors.actions) {
                                 var input = form.find('input[name^=new_action_id]').filter('[data-action-id='+id+']');
-                                input.addClass('error').after('<em class="errormsg">'+r.errors.actions[id]+'</em>');
+                                input.parent().find('input').addClass('error');
+                                input.after('<em class="errormsg">'+r.errors.actions[id]+'</em>');
                             }
                         }
                     }
@@ -130,6 +163,10 @@ $.extend($.settings = $.settings || {}, {
         });
 
         this.orderStatesSortableInit();
+
+        if (typeof $.settings.afterOrderStatesInit == "function") {
+            $.settings.afterOrderStatesInit();
+        }
     },
 
     orderStatesAction: function(path) {
@@ -154,7 +191,7 @@ $.extend($.settings = $.settings || {}, {
             update: function(event, ui) {
                 var li = ui.item;
                 var id = li.attr('id').replace('state-', '');
-                var next, before_id = null;
+                var next, before_id = '';
                 if (id) {
                     next = li.nextAll('li.dr:first');
                     if (next.length) {

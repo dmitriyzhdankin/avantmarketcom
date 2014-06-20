@@ -1,10 +1,7 @@
-{wa_js file="js/compiled/blog-calendar.js"}
+<script type="text/javascript" src="{$wa_url}wa-content/js/jquery-ui/jquery.ui.draggable.min.js"></script>
+<script type="text/javascript" src="{$wa_url}wa-content/js/jquery-ui/jquery.ui.droppable.min.js"></script>
+{wa_js file="js/blog-calendar.min.js"}
 {$wa_app_static_url}js/blogCalendar.js
-{$wa_url}wa-content/js/jquery-ui/jquery.ui.core.min.js
-{$wa_url}wa-content/js/jquery-ui/jquery.ui.widget.min.js
-{$wa_url}wa-content/js/jquery-ui/jquery.ui.mouse.min.js
-{$wa_url}wa-content/js/jquery-ui/jquery.ui.draggable.min.js
-{$wa_url}wa-content/js/jquery-ui/jquery.ui.droppable.min.js
 {/wa_js}
 <script type="text/javascript">
     $.wa_blog_options.calendar = {
@@ -22,16 +19,16 @@
 <div class="b-stream">
   <div class="block triple-padded b-stream-title">
     <div class="block half-padded float-left">
+      <a href="?action=calendar&amp;month={$prev_month}"><i class="icon16 larr"></i></a>
       {if $prev_overdue}
         <i class="icon16 exclamation" title="[`Overdue posts`]"></i>
-      {/if}
-      <a href="?action=calendar&amp;month={$prev_month}"><i class="icon16 larr"></i></a>
+      {/if}      
     </div>
     <div class="block half-padded float-right">
-      <a href="?action=calendar&amp;month={$next_month}"><i class="icon16 rarr"></i></a>
       {if $next_overdue}
         <i class="icon16 exclamation" title="[`Overdue posts`]"></i>
-      {/if}
+      {/if}    
+      <a href="?action=calendar&amp;month={$next_month}"><i class="icon16 rarr"></i></a>
     </div>
     <h1 class="align-center">
       <select name="month" class="month">

@@ -9,8 +9,8 @@ class siteDesignActions extends waDesignActions
         'container' => false,
         'save_panel' => false,
         'js' => array(
-            'codemirror' => false,
-            'editor' => false,
+            'ace' => false,
+            'editor' => true,
             'storage' => false
         ),
         'is_ajax' => true

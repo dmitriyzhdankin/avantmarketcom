@@ -5,6 +5,12 @@ abstract class waLoginAction extends waViewAction
     public function execute()
     {
 
+        // check remember enabled
+        if (waRequest::method() == 'get') {
+            $this->view->assign('remember', waRequest::cookie('remember', 1));
+            $this->saveReferer();
+        }
+
         if (wa()->getAuth()->isAuth()) {
             $this->afterAuth();
         }
@@ -18,14 +24,6 @@ abstract class waLoginAction extends waViewAction
         }
 
         $auth = wa()->getAuth();
-
-
-        // check remember enabled
-        if (waRequest::method() == 'get') {
-            $this->view->assign('remember', waRequest::cookie('remember', 1));
-        }
-
-        $this->saveReferer();
 
         $error = '';
         // try auth
@@ -60,19 +58,21 @@ abstract class waLoginAction extends waViewAction
 
     protected function saveReferer()
     {
-        $referer = waRequest::server('HTTP_REFERER');
-        $root_url = wa()->getRootUrl(true);
-        if ($root_url != substr($referer, 0, strlen($root_url))) {
-            $this->getStorage()->del('auth_referer');
-            return;
-        }
-        $referer = substr($referer, strlen($this->getConfig()->getHostUrl()));
-        if (!in_array($referer, array(
-            wa()->getRouteUrl('/login'),
-            wa()->getRouteUrl('/forgotpassword'),
-            wa()->getRouteUrl('/signup')
-        ))) {
-            $this->getStorage()->set('auth_referer', $referer);
+        if (!waRequest::param('secure')) {
+            $referer = waRequest::server('HTTP_REFERER');
+            $root_url = wa()->getRootUrl(true);
+            if ($root_url != substr($referer, 0, strlen($root_url))) {
+                $this->getStorage()->del('auth_referer');
+                return;
+            }
+            $referer = substr($referer, strlen($this->getConfig()->getHostUrl()));
+            if (!in_array($referer, array(
+                wa()->getRouteUrl('/login'),
+                wa()->getRouteUrl('/forgotpassword'),
+                wa()->getRouteUrl('/signup')
+            ))) {
+                $this->getStorage()->set('auth_referer', $referer);
+            }
         }
     }
 
@@ -80,7 +80,7 @@ abstract class waLoginAction extends waViewAction
     protected function checkXMLHttpRequest()
     {
         // Voodoo magic: reload page when user performs an AJAX request after session died.
-        if (waRequest::isXMLHttpRequest() && (waRequest::param('secure') || waRequest::param('auth'))) {
+        if (waRequest::isXMLHttpRequest() && (waRequest::param('secure') || wa()->getEnv() == 'backend')) {
             //
             // The idea behind this is quite complicated.
             //
@@ -101,8 +101,9 @@ abstract class waLoginAction extends waViewAction
     protected function afterAuth()
     {
         $url = $this->getStorage()->get('auth_referer');
+        $this->getStorage()->del('auth_referer');
         if (!$url) {
-            $url = wa()->getAppUrl();
+            $url = waRequest::param('secure') ? $this->getConfig()->getCurrentUrl() : wa()->getAppUrl();
         }
         $this->redirect($url);
     }

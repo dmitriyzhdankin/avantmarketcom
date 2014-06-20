@@ -6,10 +6,14 @@
     $(function () {
     $("#compare-all").click(function () {
         $("#compare-table tr.same").show();
+        $(this).closest('ul').find('li.selected').removeClass('selected');
+        $(this).parent().addClass('selected');
         return false;
     });
     $("#compare-diff").click(function () {
         $("#compare-table tr.same").hide();
+        $(this).closest('ul').find('li.selected').removeClass('selected');
+        $(this).parent().addClass('selected');
         return false;
     });
     $(".compare-remove").on('click', function () {
@@ -61,7 +65,7 @@
         <th>[`Price`]</th>
         {foreach $products as $p}
             <td width="{$td_width}%">
-                <span class="price nowrap">{shop_currency($p.price)}</span>
+                <span class="price nowrap">{shop_currency_html($p.price)}</span>
             </td>
         {/foreach}
     </tr>

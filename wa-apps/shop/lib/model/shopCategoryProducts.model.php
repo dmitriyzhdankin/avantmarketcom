@@ -90,6 +90,9 @@ class shopCategoryProductsModel extends waModel implements shopProductStorageInt
                 SELECT sort FROM {$this->table}
                 WHERE product_id = $before_id AND category_id = $category_id"
             )->fetchField('sort');
+            if ($sort === false) {
+                return false;
+            }
             $this->exec("
                 UPDATE {$this->table} SET sort = sort + ".count($product_ids)."
                 WHERE sort >= $sort AND category_id = $category_id"
@@ -137,22 +140,36 @@ class shopCategoryProductsModel extends waModel implements shopProductStorageInt
         if (!$category_id) {
             return false;
         }
+
+        $category_model = new shopCategoryModel();
+
+
         if ($product_ids === true) {
+
+            $product_ids = array_keys($this->select('product_id')->
+                where('category_id = :c_id', array('c_id' => $category_id))->
+                fetchAll('product_id', true));
+
             if (!$this->deleteByField('category_id', $category_id)) {
                 return false;
             }
+            if (!$category_model->updateById($category_id, array('count' => 0))) {
+                return false;
+            }
+
         } else {
             if (!$this->deleteByField(array('category_id' => $category_id, 'product_id' => $product_ids))) {
                 return false;
             }
+            if (!$category_model->recount($category_id)) {
+                return false;
+            }
         }
 
-        $category_model = new shopCategoryModel();
-        if ($product_ids === true) {
-            return $category_model->updateById($category_id, array('count' => 0));
-        } else {
-            return $category_model->recount($category_id);
-        }
+        $product_model = new shopProductModel();
+        $product_model->correctMainCategory($product_ids);
+
+        return true;
     }
 
     /**
@@ -226,9 +243,36 @@ class shopCategoryProductsModel extends waModel implements shopProductStorageInt
             $this->add($product->id, $added);
         }
 
+        //$product_model = new shopProductModel();
+        //$product_model->correctMainCategory($product->id);
+        if ($data) {
+            $product->category_id = reset($data);
+        } else {
+            $product->category_id = null;
+        }
         $product_model = new shopProductModel();
-        $product_model->correctMainCategory($product->id);
+        $product_model->updateById($product->id, array(
+            'category_id' => $product->category_id
+        ));
 
         return $data;
+    }
+    
+    /**
+     * Check for each product if is in any categories and return proper ids
+     * @param array|int $product_ids
+     * @param array|int $category_ids
+     */
+    public function filterByEnteringInCategories($product_ids, $category_ids)
+    {
+        $product_ids = (array) $product_ids;
+        $category_ids = (array) $category_ids;
+        if (empty($product_ids) || empty($category_ids)) {
+            return array();
+        }
+        $sql = "SELECT product_id FROM `{$this->table}` 
+            WHERE product_id IN(" . implode(',', $product_ids) . ") 
+                AND category_id IN(" . implode(',', $category_ids) . ")";
+        return array_keys($this->query($sql)->fetchAll('product_id'));
     }
 }
