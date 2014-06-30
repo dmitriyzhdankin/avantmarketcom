@@ -1,6 +1,6 @@
 <?php
 return array (
-  'avantmarket.com' => 
+  'avantmarket.ru' => 
   array (
     4 => 
     array (

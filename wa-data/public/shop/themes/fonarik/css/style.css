@@ -151,7 +151,8 @@ input[type="submit"]{
 	-khtml-border-radius: 2px;
 	behavior: url(PIE.htc);
 	cursor: pointer;
-	padding:0px 10px;
+	padding:0px;
+        text-align: center;
 }
 button:hover,
 input[type="submit"]:hover{
@@ -265,9 +266,9 @@ blockquote{
 	border-bottom: 1px solid #a8dade;
 	font:normal 13px   Verdana, serif;
 }
-.tab_body td.bg,.tab_body th.bg, .cart_product td.bg, .cart_product th.bg, .list_body table th{background: #f7f7f7; text-align:left;padding-left:30px;}
+.tab_body td.bg,.tab_body th.bg, .cart_product td.bg, .cart_product th.bg, .list_body table th{background: #f7f7f7; text-align:center;padding-left:30px;}
 
-.tab_body.product_opt td.bg, .tab_body.product_opt td {padding:5px 10px;}
+.tab_body.product_opt td.bg, .tab_body.product_opt td {padding:5px; text-align: center;}
 .tab_body.product_opt th.bg, .tab_body.product_opt th{text-align:center;padding-left:0px;}
 /*************
  * Structure *
@@ -2010,12 +2011,14 @@ table.cart_product td.cart_but{
 }
 table.cart_product td.cart_but button.continue,
 table.cart_product td.cart_but button.update{
-	float: left;
-	padding: 0 20px;
-	height: 29px;
-	background: #f1f3f5;
-	border: 0 none;
-	color: #444;
+    border: 0 none;
+    color: #444;
+    background: none repeat scroll 0 0 #f1f3f5;
+    float: left;
+    font-size: 14px;
+    height: 40px;
+    line-height: 13px;
+    padding: 0 20px;
 }
 table.cart_product td.cart_but button.update{float: right;}
 table.cart_product td.cart_but button.continue:hover,
@@ -2928,3 +2931,4 @@ a.opt_table_link img{
 width:50px;
 height:50px;	
 }
+#main .container_12 .grid_12 .atSlider { margin-top:0;}

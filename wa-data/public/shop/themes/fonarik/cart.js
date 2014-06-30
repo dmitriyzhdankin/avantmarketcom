@@ -2,7 +2,9 @@ $(function () {
 
     function updateCart(data)
     {
+        console.log('>>>>>a');
         $(".cart-total").html(data.total);
+        $(".grand_total .price").html(data.total);
         $(".cart-discount").html('&minus; ' + data.discount);
     }
 
@@ -25,6 +27,7 @@ $(function () {
             tr.remove();
             updateCart(response.data);
         }, "json");
+        return false;
     });
 
     $(".cart input.qty").change(function () {

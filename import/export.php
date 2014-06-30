@@ -65,13 +65,13 @@ function exportCSV($dir, $limit, $where)
 					   $f2 = substr(strip_tags($imageRes['product_id']),0, -2);
 					   if(strlen($f2) < 2) { $f2 = '0'.$f2; }
 					   if($im > 0 ) { $images .= ' , '; }
-				       $images .= 'http://avantmarket.com/wa-data/public/shop/products/'.$f1.'/'.$f2.'/'.$imageRes['product_id'].'/images/'.$imageRes['id'].'/'.$imageRes['id'].'.750x0.jpg';
+				       $images .= 'http://avantmarket.ru/wa-data/public/shop/products/'.$f1.'/'.$f2.'/'.$imageRes['product_id'].'/images/'.$imageRes['id'].'/'.$imageRes['id'].'.750x0.jpg';
 					   $im++;
 					 }
 					 
 				   $products[$i][0] = iconv("UTF-8", "Windows-1251",$row['sku']);
 				   $products[$i][1] = iconv("UTF-8", "Windows-1251",$row['name']);
-				   $products[$i][2] = 'http://avantmarket.com/'.$row['url'];				   
+				   $products[$i][2] = 'http://avantmarket.ru/'.$row['url'];				   
 				   $products[$i][3] = iconv("UTF-8", "Windows-1251",str_replace("&nbsp;"," ",strip_tags($row['summary'])));
 				   $products[$i][4] = iconv("UTF-8", "Windows-1251",str_replace("&nbsp;"," ",strip_tags($row['description'])));
 				   $products[$i][5] = number_format($row['price'], 2, ',', '');
@@ -103,7 +103,7 @@ function exportCSV($dir, $limit, $where)
 				  foreach ($products as $fields) {
                     fputcsv($fp, $fields, ';');
                   }
-                if($fp) { echo 'File: http://avantmarket.com/csv/'.$filename.'.csv, products: '.(count($products)-1).'<br/>'; fclose($fp); }			  
+                if($fp) { echo 'File: http://avantmarket.ru/csv/'.$filename.'.csv, products: '.(count($products)-1).'<br/>'; fclose($fp); }			  
       } 
 	  
 	  

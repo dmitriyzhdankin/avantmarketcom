@@ -14,3 +14,15 @@ UPDATE photos_photo p LEFT JOIN wa_contact c ON p.contact_id = c.id
         WHERE c.id IS NULL
 
 ALTER TABLE `photos_photo` CHANGE rate rate DECIMAL(3,2) NOT NULL DEFAULT 0
+
+
+UPDATE `blog_post` SET `text` = REPLACE(`text`, 'http://avantmarket.com/', 'http://avantmarket.ru/');
+UPDATE `blog_post` SET `text_before_cut` = REPLACE(`text_before_cut`, 'http://avantmarket.com/', 'http://avantmarket.ru/');
+UPDATE `dislider_images` SET `link` = REPLACE(`link`, 'http://avantmarket.com/', 'http://avantmarket.ru/');
+UPDATE `shop_custommenu_item` SET `url` = REPLACE(`url`, 'http://avantmarket.com/', 'http://avantmarket.ru/');
+UPDATE `shop_order_params` SET `value` = REPLACE(`value`, 'avantmarket.com', 'avantmarket.ru');
+UPDATE `shop_page` SET `domain` = REPLACE(`domain`, 'avantmarket.com', 'avantmarket.ru');
+UPDATE `shop_page` SET `content` = REPLACE(`content`, 'http://avantmarket.com/', 'http://avantmarket.ru/');
+UPDATE `shop_product` SET `description` = REPLACE(`description`, 'http://avantmarket.com/', 'http://avantmarket.ru/');
+UPDATE `site_domain` SET `name` = REPLACE(`name`, 'avantmarket.com', 'avantmarket.ru');
+UPDATE `wa_app_settings` SET `value` = REPLACE(`value`, 'avantmarket.com', 'avantmarket.ru');

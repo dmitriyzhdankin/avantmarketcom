@@ -173,6 +173,10 @@ $(function () {
         if (compare.length < 2) {
             $("#compare-link").hide();
         }
+        if (compare.length > 1) {
+            var url = $("#compare-link").attr('href').replace(/compare\/.*$/, 'compare/' + compare.join(',') + '/');
+            $("#compare-link").attr('href', url).show().find('span.count').html(compare.length);
+        }
         if (compare) {
             $.cookie('shop_compare', compare.join(','), { expires: 30, path: '/'});
         } else {

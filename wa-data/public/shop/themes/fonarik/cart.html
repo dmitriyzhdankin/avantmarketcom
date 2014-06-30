@@ -66,7 +66,7 @@
                         </td>
                         <td class="bg edit" style="padding:30px 10px 0px 10px;">{$item.sku_name}</td>
 		        <td class="price" style="padding-left:10px;width:90px;">{shop_currency($item.price)}</td>
-                        <td class="bg price" style="padding-left:10px;width:80px;">{if $wa->user()->getName() && isset($item.opt_price) } {shop_currency($item.opt_price)}{else}{shop_currency($item.price)}{/if} </td>
+                        <td class="bg price" style="padding-left:10px;width:80px;font-weight: bold;">{if $wa->user()->getName() && isset($item.opt_price) } {shop_currency($item.opt_price)}{else}{shop_currency($item.price)}{/if} </td>
                         <td class="qty" style="text-align:center;padding-left:0px;"><input type="text" name="quantity[{$item.id}]" value="{$item.quantity}" class="qty"></td>
                         <td class="bg price" style="text-align:center;padding-left:0px;">
                          {if $wa->user()->getName() && isset($item.opt_price) && $item.opt_price neq 0}                        

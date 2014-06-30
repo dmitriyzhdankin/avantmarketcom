@@ -8,7 +8,8 @@ $(document).ready(function () {
                 var cart_total = $(".cart-total");
 				
                 f.children('input[type=submit]').val('Добавлено');
-				cart_total.html(response.data.total);	
+                f.children('input[type=submit]').css('background','#59d792');
+		cart_total.html(response.data.total);	
                
             }
         }, "json");

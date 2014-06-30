@@ -59,7 +59,7 @@ function exportXML($dir, $limit, $where)
 					   $f2 = substr(strip_tags($imageRes['product_id']),0, -2);
 					   if(strlen($f2) < 2) { $f2 = '0'.$f2; }
 					   if($im > 0 ) { $images .= ' , '; }
-				       $images .= 'http://avantmarket.com/wa-data/public/shop/products/'.$f1.'/'.$f2.'/'.$imageRes['product_id'].'/images/'.$imageRes['id'].'/'.$imageRes['id'].'.750x0.jpg';
+				       $images .= 'http://avantmarket.ru/wa-data/public/shop/products/'.$f1.'/'.$f2.'/'.$imageRes['product_id'].'/images/'.$imageRes['id'].'/'.$imageRes['id'].'.750x0.jpg';
 					   $im++;
 					 }
 					 
@@ -77,7 +77,7 @@ function exportXML($dir, $limit, $where)
 					 
 				   $url = $doc->createElement('url');
                    $url =  $product->appendChild($url);
-                   $urltext = $doc->createTextNode('http://avantmarket.com/'.$row['url']);
+                   $urltext = $doc->createTextNode('http://avantmarket.ru/'.$row['url']);
                    $urltext = $url->appendChild($urltext);
 				   
 				   $shortdescription = $doc->createElement('shortdescription');
